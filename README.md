@@ -6,6 +6,7 @@ and the interface contains only the connection list and the session itself.
 
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
 - Status as of 2026-11-13: requirements collected, no code yet
+- Architecture: [docs/architecture.md](docs/architecture.md)
 - Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org) - this only
   matters when publishing
 
@@ -37,6 +38,26 @@ and the interface contains only the connection list and the session itself.
 9. **High-resolution monitors and scaling.** The application works on high-resolution monitors, and the
    scale selected in Windows for the monitor (125%, 150%, etc.) is passed to the RDP session. When the
    window moves to a monitor with a different scale, the session receives the new scale.
+10. **No auto-lock.** Once unlocked, the application stays unlocked until it is closed.
+11. **Single instance.** Only one running instance of the application per machine.
+12. **Server certificates: remember after first consent.** When a server certificate is not trusted, the
+    application warns once. After the user accepts it, the choice is remembered and the warning does not
+    appear again for this server.
+13. **Redirection is configured per connection.** Each connection has its own redirection settings
+    (clipboard, drives, audio, microphone, printers). Proposed defaults, not confirmed: clipboard and
+    audio on, drives, microphone and printers off.
+14. **Direct Hyper-V connections.** A VM can be reached through its Hyper-V host, the way the Hyper-V
+    console does it, without network access inside the VM.
+15. **Reconnect on connection loss.** A session reconnects automatically when the connection drops.
+    Open sessions are not restored on the next start.
+16. **Window layout is not remembered.** The application does not store which session was on which
+    monitor.
+
+Decided for the first version:
+
+- Key derivation is PBKDF2 (built in, no dependencies), not Argon2id.
+- RD Gateway, non-standard ports and domain accounts are out of scope (probably not needed).
+- Target systems: Windows 10 22H2 and Windows 11, x64.
 
 ## Interface
 
@@ -45,8 +66,9 @@ Decisions made on 2026-11-12 and 2026-11-13.
 - **No top bar.** No quick-connect field with protocol selection, no menu. Only two commands are needed
   from it: add a connection and change the master password.
 - **Connection properties are a separate form.** It opens only when a connection is added or edited.
-  There is no permanent properties panel. Fields: name, address, user name, password; anything else only
-  if it turns out to be needed.
+  There is no permanent properties panel. Fields: name, connection type (network address, or a VM on a
+  Hyper-V host), address, user name, password, redirection settings; anything else only if it turns out
+  to be needed.
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
   with a collapse arrow; while there are no groups, a flat list). Two lines per connection: the name, and
   below it the user name and address in gray. Status dot: green - connected, empty circle - not
@@ -84,6 +106,13 @@ Decisions made on 2026-11-12 and 2026-11-13.
 - [ ] Which key combinations reach the application while the focus is inside the remote desktop.
 - [ ] Changing the scale on the fly (moving a window between monitors with different scales): how
       programs inside the VM behave, and whether a reconnect is needed.
+- [ ] Direct Hyper-V connection: from memory, the Hyper-V console connects to port 2179 on the host and
+      passes the VM ID in the pre-connection blob. Verify this, the rights required on the host, and
+      which credentials are used for the host and for the guest.
+- [ ] Server certificates: whether the component exposes the certificate thumbprint, so the consent can
+      be stored in the settings file and travel between machines. Fallback: the component's own "do not
+      ask again" option, which Windows stores in the registry on each machine separately.
+- [ ] Automatic reconnect: what the component does by itself and what we have to handle.
 - [ ] Size of the final exe (CdRescue on the same platform is about 50 MB).
 
 ## Open questions
@@ -95,6 +124,7 @@ Decisions made on 2026-11-12 and 2026-11-13.
   only).
 - What to do if the settings file changes on disk while the application is open (copied from another
   machine).
+- Redirection: confirm the list of settings and their defaults (see requirement 13).
 
 ## Findings along the way
 

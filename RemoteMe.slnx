@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/RemoteMe.Core/RemoteMe.Core.csproj" />
+    <Project Path="src/RemoteMe/RemoteMe.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RemoteMe.Tests/RemoteMe.Tests.csproj" />
+  </Folder>
+</Solution>

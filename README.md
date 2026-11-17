@@ -5,8 +5,8 @@ the remote desktop resolution follows the window size, the picture stays sharp a
 and the interface contains only the connection list and the session itself.
 
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-17: stages 0-7 done, v0.1.0 released; code signing waits for SignPath
-  Foundation to accept the project
+- Status as of 2026-11-17: stages 0-7 done, v0.1.0 released; releases are not signed (see the code
+  signing policy)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org); the name is
   kept (decided on 2026-11-17)
@@ -199,17 +199,20 @@ git push origin v0.1.0
 To check a download, compare the output of `Get-FileHash RemoteMe.exe` (PowerShell) with the hash in
 `RemoteMe.exe.sha256` and in the release notes.
 
-Signing goes through SignPath Foundation, free for open source projects (decided on 2026-11-17; see
-the code signing policy below). The release workflow signs the exe only when the repository variable
-`SIGNPATH_ORGANIZATION_ID` is set. It then also needs the variables `SIGNPATH_PROJECT_SLUG` and
-`SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`, waits up to an hour for the signing
-request to be approved in SignPath, checks the signature and releases the signed exe. Without the
-variable the release is not signed, and the release notes say so. An unsigned exe makes Windows
-SmartScreen warn about an unknown publisher; a signed one stops the warning only once the publisher
-has built up reputation.
+## Code signing policy
 
-The artifact configuration in SignPath (the workflow uploads `RemoteMe.exe` as the only file of a
-GitHub artifact and passes the version from the tag):
+Releases are not signed (decided on 2026-11-17). SignPath Foundation, which signs open source projects
+for free, declined the application on 2026-11-17: it accepts projects that are already widely known.
+The project can apply again later. An unsigned exe makes Windows SmartScreen warn about an unknown
+publisher; check each download against its SHA-256 as described under "Build".
+
+The release workflow keeps a signing step through SignPath for that case. It runs only when the
+repository variable `SIGNPATH_ORGANIZATION_ID` is set, and then also needs the variables
+`SIGNPATH_PROJECT_SLUG` and `SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`. It waits
+up to an hour for the signing request to be approved by hand in SignPath, checks the signature and
+releases the signed exe. The notes of each release say whether its exe is signed. The artifact
+configuration in SignPath (the workflow uploads `RemoteMe.exe` as the only file of a GitHub artifact
+and passes the version from the tag):
 
 ```xml
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
@@ -224,19 +227,8 @@ GitHub artifact and passes the version from the tag):
 </artifact-configuration>
 ```
 
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
-
-Status as of 2026-11-17: the project is applying to SignPath Foundation. Until it is accepted,
-releases are not signed; the notes of each release say whether its exe is signed.
-
-- Committers and reviewers: [vgdotnet](https://github.com/vgdotnet)
-- Approvers: [vgdotnet](https://github.com/vgdotnet)
-
 Releases are built from the tagged source by GitHub Actions (`.github/workflows/release.yml`) on
-GitHub-hosted runners, and every signing request is approved by hand.
+GitHub-hosted runners.
 
 Privacy policy: This program will not transfer any information to other networked systems unless
 specifically requested by the user or the person installing or operating it.

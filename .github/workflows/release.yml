@@ -47,8 +47,8 @@ jobs:
             throw "The publish folder must hold only RemoteMe.exe, found: $($files.Name -join ', ')"
           }
 
-      # Signing starts once SignPath Foundation has approved the project and the repository variables
-      # are set (README, "Code signing policy"); until then releases are not signed.
+      # Signing runs only when the SignPath repository variables are set (README, "Code signing policy");
+      # without them releases are not signed.
       - name: Upload the exe for signing
         id: unsigned
         if: vars.SIGNPATH_ORGANIZATION_ID != ''

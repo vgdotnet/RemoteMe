@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Read the version from the tag
+        id: version
+        run: |
+          if ($env:GITHUB_REF_NAME -notmatch '^v(\d+\.\d+\.\d+)$') {
+            throw "The tag '$env:GITHUB_REF_NAME' is not a version such as v0.1.0."
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "number=$($Matches[1])"
+
+      - name: Test
+        run: dotnet test RemoteMe.slnx -c Release
+
+      - name: Publish
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+        run: dotnet publish src/RemoteMe/RemoteMe.csproj -p:PublishProfile=SingleFile "-p:Version=$env:VERSION"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          # Absolute, since .NET methods resolve relative paths against the process directory.
+          $dir = (Resolve-Path 'src/RemoteMe/bin/publish').Path
+          $files = @(Get-ChildItem $dir -File)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'RemoteMe.exe') {
+            throw "The publish folder must hold only RemoteMe.exe, found: $($files.Name -join ', ')"
+          }
+          $hash = (Get-FileHash "$dir/RemoteMe.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$dir/RemoteMe.exe.sha256", "$hash  RemoteMe.exe`n")
+          $notes = @"
+          RemoteMe $env:VERSION for Windows 10 22H2 and Windows 11, x64: one portable exe, not signed.
+
+          SHA-256 of RemoteMe.exe: $hash
+          "@
+          [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes)
+          gh release create $env:GITHUB_REF_NAME "$dir/RemoteMe.exe" "$dir/RemoteMe.exe.sha256" `
+            --verify-tag --title "RemoteMe $env:VERSION" --notes-file "$env:RUNNER_TEMP/notes.md" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed with exit code $LASTEXITCODE." }

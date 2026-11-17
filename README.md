@@ -5,11 +5,10 @@ the remote desktop resolution follows the window size, the picture stays sharp a
 and the interface contains only the connection list and the session itself.
 
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-17: stages 0-5 done, stage 6 (direct Hyper-V connections, redirection, server
-  certificates) waiting for review
+- Status as of 2026-11-17: stages 0-6 done, stage 7 (releases and GitHub Actions) waiting for review
 - Architecture: [docs/architecture.md](docs/architecture.md)
-- Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org) - this only
-  matters when publishing
+- Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org); the name is
+  kept (decided on 2026-11-17)
 
 ## Requirements
 
@@ -181,6 +180,25 @@ dotnet publish src/RemoteMe/RemoteMe.csproj -p:PublishProfile=SingleFile
 
 The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.exe` (win-x64).
 
+GitHub Actions (decided on 2026-11-17):
+
+- `.github/workflows/build.yml` builds, tests and checks the formatting on every push and pull request
+  to `main`.
+- `.github/workflows/release.yml` runs when a tag such as `v0.1.0` is pushed. It runs the tests,
+  publishes the exe with that version and publishes a GitHub release at once with `RemoteMe.exe` and
+  `RemoteMe.exe.sha256`. Only tags of the form `vX.Y.Z` are accepted.
+
+To make a release:
+
+```
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The exe is not signed, so Windows SmartScreen warns about an unknown publisher the first time a
+downloaded copy is started. To check a download, compare the output of `Get-FileHash RemoteMe.exe`
+(PowerShell) with the hash in `RemoteMe.exe.sha256` and in the release notes.
+
 ## To verify during implementation
 
 - [x] Whether the RDP component survives being moved from one window to another without reconnecting.
@@ -194,8 +212,9 @@ The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.
       Checked on 2026-11-13 with the stage 0 skeleton (an empty window, no RDP component yet): it does
       not. The publish folder holds only `RemoteMe.exe`, and on start nothing appears in
       `DOTNET_BUNDLE_EXTRACT_BASE_DIR`, in `%TEMP%\.net` or next to the exe, with or without
-      compression. Recheck once the RDP wrapper is in; it should add no files, since `mstscax.dll` is
-      loaded from Windows.
+      compression. Rechecked on 2026-11-17 with the finished application: a connection attempt loaded
+      `mstscax.dll` from `System32`, and nothing appeared next to the exe except the settings file or in
+      `%TEMP%\.net`.
 - [ ] Which key combinations reach the application while the focus is inside the remote desktop.
       So far: the WinForms message loop sees none of them (see the technical notes), a low-level hook
       does. With the default keyboard hook mode (2, full screen only) Alt+Tab and Ctrl+Esc act on the
@@ -246,6 +265,8 @@ The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.
 - [x] Size of the final exe (CdRescue on the same platform is about 50 MB).
       Stage 0 skeleton: 46.9 MB with `EnableCompressionInSingleFile`, 102.1 MB without. Warm start to
       the first window is about 200 ms compressed and about 135 ms uncompressed. Compression is on.
+      Finished application (2026-11-17): 47.0 MB; the master password window appeared about 0.4 s
+      after start, measured by polling UI Automation, which adds its own delay.
 
 ## Open questions
 

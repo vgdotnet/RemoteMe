@@ -12,6 +12,8 @@ namespace RemoteMe.UI;
 internal sealed class MainForm : Form {
     private const string LogSource = "Settings";
     private const string ReturnText = "Return to main window";
+    private const string AddGlyph = "";
+    private const string MoreGlyph = "";
     private const string FullScreenGlyph = "";
     private const string WindowGlyph = "";
 
@@ -57,28 +59,32 @@ internal sealed class MainForm : Form {
         Text = Messages.Title;
 
         _list = new ConnectionList { Dock = DockStyle.Fill };
-        var addButton = new Button { Text = "Add connection", Height = 32, Anchor = AnchorStyles.Left | AnchorStyles.Right };
-        _fullScreenButton = new Button { Size = new Size(40, 32) };
-        _fullScreenButton.Font = _glyphFont = new Font("Segoe MDL2 Assets", _fullScreenButton.Font.Size);
+        _glyphFont = new Font("Segoe MDL2 Assets", 11f);
+        var addButton = CreateIconButton(AddGlyph, "Add connection");
+        _fullScreenButton = CreateIconButton(FullScreenGlyph, "");
         ShowMainFullScreenState();
-        var moreButton = new Button { Text = "...", Size = new Size(40, 32), AccessibleName = "More commands" };
+        var moreButton = CreateIconButton(MoreGlyph, "More commands");
         var bottomBar = new TableLayoutPanel {
             Dock = DockStyle.Bottom,
             AutoSize = true,
-            ColumnCount = 3,
+            ColumnCount = 4,
             RowCount = 1,
-            Padding = new Padding(6),
+            Padding = new Padding(6, 4, 6, 6),
+            BackColor = SystemColors.Window,
         };
+        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         bottomBar.Controls.Add(addButton, 0, 0);
-        bottomBar.Controls.Add(_fullScreenButton, 1, 0);
-        bottomBar.Controls.Add(moreButton, 2, 0);
+        bottomBar.Controls.Add(_fullScreenButton, 2, 0);
+        bottomBar.Controls.Add(moreButton, 3, 0);
+        var bottomLine = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Palette.Separator };
 
         _mainView = new SessionView();
         _split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
         _split.Panel1.Controls.Add(_list);
+        _split.Panel1.Controls.Add(bottomLine);
         _split.Panel1.Controls.Add(bottomBar);
         _split.Panel2.Controls.Add(_mainView);
         _listStrip = new Button {
@@ -122,7 +128,7 @@ internal sealed class MainForm : Form {
         _list.StatusOf = StatusOf;
         addButton.Click += (_, _) => AddConnection();
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
-        moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
+        moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
         _listStrip.Click += (_, _) => ToggleList();
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
         _list.MenuRequested += (_, e) => ShowConnectionMenu(e.Connection.Id, e.ScreenLocation);
@@ -512,6 +518,24 @@ internal sealed class MainForm : Form {
         }
         _mainFullScreen = !_mainFullScreen;
         ShowMainFullScreenState();
+    }
+
+    private Button CreateIconButton(string glyph, string name) {
+        var button = new Button {
+            Text = glyph,
+            Font = _glyphFont,
+            Size = new Size(36, 32),
+            Margin = new Padding(2, 0, 2, 0),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = SystemColors.Window,
+            ForeColor = SystemColors.ControlText,
+            AccessibleName = name,
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = Palette.Hover;
+        button.FlatAppearance.MouseDownBackColor = Palette.Pressed;
+        _toolTip.SetToolTip(button, name);
+        return button;
     }
 
     private void ShowMainFullScreenState() {

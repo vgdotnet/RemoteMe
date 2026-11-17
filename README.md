@@ -90,13 +90,16 @@ Decisions made on 2026-11-12 and 2026-11-13.
   "Enhanced session" check box instead of the user name and password; for a basic session the
   redirection settings are grayed out (decided on 2026-11-17).
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
-  with a collapse arrow; while there are no groups, a flat list). Two lines per connection: the name, and
+  with a collapse arrow; while there are no groups, a flat list). The caption is a band tinted with
+  the Windows accent color, with an accent bar on the left and the number of its connections on the
+  right, and a gap above it (decided on 2026-11-17). Two lines per connection: the name, and
   below it the user name and address in gray. Status dot: green - connected, yellow - connecting or
   reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
-  menu. At the bottom there is one labeled button, "Add connection", and next to it a "..." button
-  whose menu holds "Change master password" and "Log" (decided on 2026-11-13). Between them is a
-  full-screen button with an icon (see the session area; decided on 2026-11-17).
+  menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
+  (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
+  (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
+  and "Log" (decided on 2026-11-13).
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 using RemoteMe.Core.Model;
 
 namespace RemoteMe.UI;
@@ -37,6 +38,10 @@ internal sealed class ConnectionList : ScrollableControl {
     private int _dotSize;
     private int _textLeft;
     private int _menuButtonSize;
+    private int _groupGap;
+    private int _rowInset;
+    private int _cornerRadius;
+    private int _accentWidth;
 
     public ConnectionList() {
         SetStyle(
@@ -73,8 +78,6 @@ internal sealed class ConnectionList : ScrollableControl {
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Func<Guid, ConnectionStatus> StatusOf { get; set; } = _ => ConnectionStatus.NotConnected;
-
-    private Color HoverColor => Blend(SystemColors.Window, SystemColors.Highlight, 0.12);
 
     public void ShowSettings(Settings settings) {
         _settings = settings;
@@ -285,10 +288,14 @@ internal sealed class ConnectionList : ScrollableControl {
         _lineHeight = TextRenderer.MeasureText("Ag", Font, Size.Empty, TextFormatFlags.NoPadding).Height;
         _padding = LogicalToDeviceUnits(10);
         _connectionRowHeight = _lineHeight * 2 + LogicalToDeviceUnits(16);
-        _groupRowHeight = _lineHeight + LogicalToDeviceUnits(14);
+        _groupGap = LogicalToDeviceUnits(6);
+        _groupRowHeight = _groupGap + _lineHeight + LogicalToDeviceUnits(14);
         _dotSize = LogicalToDeviceUnits(10);
         _textLeft = _padding * 2 + _dotSize;
         _menuButtonSize = LogicalToDeviceUnits(26);
+        _rowInset = LogicalToDeviceUnits(4);
+        _cornerRadius = LogicalToDeviceUnits(4);
+        _accentWidth = LogicalToDeviceUnits(3);
     }
 
     private void Rebuild() {
@@ -425,11 +432,11 @@ internal sealed class ConnectionList : ScrollableControl {
     private void PaintConnection(Graphics graphics, Connection connection, Rectangle bounds, int index) {
         var active = connection.Id == _activeConnectionId;
         var hover = index == _hoverIndex && !_dragging;
+        var plate = Rectangle.FromLTRB(bounds.Left + _rowInset, bounds.Top + 1, bounds.Right - _rowInset, bounds.Bottom - 1);
         if (active) {
-            graphics.FillRectangle(SystemBrushes.Highlight, bounds);
+            FillRounded(graphics, SystemColors.Highlight, plate, _cornerRadius);
         } else if (hover) {
-            using var brush = new SolidBrush(HoverColor);
-            graphics.FillRectangle(brush, bounds);
+            FillRounded(graphics, Palette.Hover, plate, _cornerRadius);
         }
         var foreground = active ? SystemColors.HighlightText : SystemColors.ControlText;
         var secondary = active ? SystemColors.HighlightText : SystemColors.GrayText;
@@ -447,31 +454,61 @@ internal sealed class ConnectionList : ScrollableControl {
             PaintMenuButton(graphics, MenuButtonBounds(bounds), foreground);
         }
         if (Focused && index == _focusIndex) {
-            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(bounds, -1, -1), foreground, active ? SystemColors.Highlight : BackColor);
+            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(plate, -1, -1), foreground, active ? SystemColors.Highlight : BackColor);
         }
     }
 
+    // A group caption is a tinted band with an accent bar on the left and the number of its connections
+    // on the right; the gap above the band sets the groups apart.
     private void PaintGroup(Graphics graphics, GroupRow group, Rectangle bounds, int index) {
-        if (index == _hoverIndex && !_dragging) {
-            using var brush = new SolidBrush(HoverColor);
-            graphics.FillRectangle(brush, bounds);
+        var band = Rectangle.FromLTRB(bounds.Left, bounds.Top + _groupGap, bounds.Right, bounds.Bottom);
+        using (var brush = new SolidBrush(index == _hoverIndex && !_dragging ? Palette.GroupBandHover : Palette.GroupBand)) {
+            graphics.FillRectangle(brush, band);
         }
+        graphics.FillRectangle(SystemBrushes.Highlight, band.Left, band.Top, _accentWidth, band.Height);
+
         var arrow = LogicalToDeviceUnits(4);
-        var center = new Point(bounds.Left + _padding + _dotSize / 2, bounds.Top + bounds.Height / 2);
+        var center = new Point(band.Left + _padding + _dotSize / 2, band.Top + band.Height / 2);
         Point[] triangle = group.IsCollapsed
             ? [new(center.X - arrow / 2, center.Y - arrow), new(center.X + arrow, center.Y), new(center.X - arrow / 2, center.Y + arrow)]
             : [new(center.X - arrow, center.Y - arrow / 2), new(center.X + arrow, center.Y - arrow / 2), new(center.X, center.Y + arrow)];
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        graphics.FillPolygon(SystemBrushes.GrayText, triangle);
+        graphics.FillPolygon(SystemBrushes.ControlText, triangle);
         graphics.SmoothingMode = SmoothingMode.Default;
 
-        var caption = group.IsCollapsed ? $"{group.Name}  ({group.ConnectionCount})" : group.Name;
-        var textBounds = new Rectangle(bounds.Left + _textLeft, bounds.Top, bounds.Width - _textLeft - _padding, bounds.Height);
-        TextRenderer.DrawText(graphics, caption, _captionFont ?? Font, textBounds, SystemColors.ControlText, TextFlags);
+        var count = group.ConnectionCount.ToString(CultureInfo.CurrentCulture);
+        var pillHeight = _lineHeight + LogicalToDeviceUnits(2);
+        var pillWidth = Math.Max(pillHeight, TextRenderer.MeasureText(count, Font, Size.Empty, TextFormatFlags.NoPadding).Width + _padding);
+        var pill = new Rectangle(band.Right - _padding - pillWidth, band.Top + (band.Height - pillHeight) / 2, pillWidth, pillHeight);
+        FillRounded(graphics, Palette.GroupCount, pill, pillHeight / 2);
+        TextRenderer.DrawText(graphics, count, Font, pill, SystemColors.ControlText,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+
+        var textBounds = Rectangle.FromLTRB(band.Left + _textLeft, band.Top, pill.Left - _padding / 2, band.Bottom);
+        TextRenderer.DrawText(graphics, group.Name, _captionFont ?? Font, textBounds, SystemColors.ControlText, TextFlags);
 
         if (Focused && index == _focusIndex) {
-            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(bounds, -1, -1));
+            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(band, -1, -1));
         }
+    }
+
+    private static void FillRounded(Graphics graphics, Color color, Rectangle bounds, int radius) {
+        var diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+        if (diameter < 2) {
+            using var plain = new SolidBrush(color);
+            graphics.FillRectangle(plain, bounds);
+            return;
+        }
+        using var path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        using var brush = new SolidBrush(color);
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.FillPath(brush, path);
+        graphics.SmoothingMode = SmoothingMode.Default;
     }
 
     private void PaintStatusDot(Graphics graphics, Rectangle dot, ConnectionStatus status, bool onHighlight) {
@@ -532,9 +569,4 @@ internal sealed class ConnectionList : ScrollableControl {
         ConnectionRow connection => "connection:" + connection.Connection.Id,
         _ => "",
     };
-
-    private static Color Blend(Color from, Color to, double amount) => Color.FromArgb(
-        (int)(from.R + (to.R - from.R) * amount),
-        (int)(from.G + (to.G - from.G) * amount),
-        (int)(from.B + (to.B - from.B) * amount));
 }

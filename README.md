@@ -5,7 +5,8 @@ the remote desktop resolution follows the window size, the picture stays sharp a
 and the interface contains only the connection list and the session itself.
 
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-13: stage 1 (prototypes) done, stage 2 (vault and model) in progress
+- Status as of 2026-11-17: stages 0-5 done, stage 6 (direct Hyper-V connections, redirection, server
+  certificates) waiting for review
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org) - this only
   matters when publishing
@@ -15,7 +16,7 @@ and the interface contains only the connection list and the session itself.
 1. **Single exe.** All required DLLs are inside (self-contained single-file, Windows x64). The RDP engine
    itself (`mstscax.dll`) is part of Windows and is not included in the exe.
 2. **Portable.** No installation, nothing of our own in the registry or in the user profile. The settings
-   file lives next to the exe.
+   file, `RemoteMe.settings`, lives next to the exe.
 3. **Master password on startup.** It decrypts the settings file. The password is not stored anywhere,
    it is kept only in memory while the application is open. A forgotten password cannot be recovered.
    First run: there is no file yet, so the application asks for a new password (twice) and creates
@@ -26,15 +27,19 @@ and the interface contains only the connection list and the session itself.
    iterations, random salt), encryption is AES-256-GCM (a wrong password and a damaged file are detected
    immediately).
 5. **Connection passwords are stored in the file.** Connecting takes one click, the Windows credentials
-   dialog does not appear.
+   dialog does not appear. When a connection has no saved password, RemoteMe asks for it in its own
+   window before connecting and offers to save it (decided on 2026-11-13). The exception is a Hyper-V
+   VM in an enhanced session: its own password is asked in a Windows dialog (see requirement 14).
 6. **Platform - modern .NET.** .NET 10 (SDK 10.0.404), WinForms, `net10.0-windows`.
 7. **Sessions can be moved to separate windows.** This lets different sessions sit on different monitors
    at the same time. Commands: "Open in separate window" and "Return to main window". Each window has
    its own resolution, and the scale is recalculated when the window moves to a monitor with a different
    scale. There is still one list, in the main window; clicking a detached session brings its window to
-   the front.
+   the front. Both commands are in the connection's menu. Closing a separate window disconnects its
+   session (decided on 2026-11-13).
 8. **Full screen on the current monitor.** Any session (in the main window or detached) can be expanded
-   to the full screen of the monitor it is currently on. A hotkey returns it to the window.
+   to the full screen of the monitor it is currently on. A hotkey returns it to the window. The hotkey
+   is Ctrl+Alt+Break both ways, as in mstsc; "Full screen" is also in the connection's menu.
 9. **High-resolution monitors and scaling.** The application works on high-resolution monitors, and the
    scale selected in Windows for the monitor (125%, 150%, etc.) is passed to the RDP session. When the
    window moves to a monitor with a different scale, the session receives the new scale.
@@ -42,14 +47,27 @@ and the interface contains only the connection list and the session itself.
 11. **Single instance.** Only one running instance of the application per machine.
 12. **Server certificates: remember after first consent.** When a server certificate is not trusted, the
     application warns once. After the user accepts it, the choice is remembered and the warning does not
-    appear again for this server.
+    appear again for this server. The warning is the RDP component's own dialog with its "Don't ask me
+    again for connections to this computer" option; Windows keeps that consent in the registry of each
+    machine, shared with mstsc, so on another machine it is asked once more (decided on 2026-11-17).
 13. **Redirection is configured per connection.** Each connection has its own redirection settings
     (clipboard, drives, audio, microphone, printers). Defaults for a new connection (decided on
     2026-11-13): clipboard, audio and microphone on, drives and printers off.
 14. **Direct Hyper-V connections.** A VM can be reached through its Hyper-V host, the way the Hyper-V
-    console does it, without network access inside the VM.
+    console does it, without network access inside the VM. Decided on 2026-11-17:
+    - only the Hyper-V host on this computer is needed; RemoteMe signs in to it with the current Windows
+      account (which must be allowed to use Hyper-V), so a VM connection has no user name or password;
+    - each VM connection chooses an enhanced session (on by default) or a basic one. An enhanced
+      session needs Remote Desktop inside the VM, follows the window size and has redirection; the VM
+      asks for its own password in a Windows dialog every time, and nothing is remembered. A basic
+      session is the VM's console: it works without Remote Desktop inside the VM, keeps the VM's own
+      resolution and has no redirection; its sign-in screen gets Ctrl+Alt+Del from "Send Ctrl+Alt+Del"
+      in the connection's menu.
 15. **Reconnect on connection loss.** A session reconnects automatically when the connection drops.
-    Open sessions are not restored on the next start.
+    Open sessions are not restored on the next start. The reconnect is the RDP component's own (it
+    rides out network interruptions); when it gives up, the session area shows the reason and a
+    "Reconnect" button, and RemoteMe does not retry by itself (decided on 2026-11-13). Closing the main
+    window closes the open sessions without asking (decided on 2026-11-13).
 16. **Window layout is not remembered.** The application does not store which session was on which
     monitor.
 
@@ -68,21 +86,42 @@ Decisions made on 2026-11-12 and 2026-11-13.
 - **Connection properties are a separate form.** It opens only when a connection is added or edited.
   There is no permanent properties panel. Fields: name, connection type (network address, or a VM on a
   Hyper-V host), address, user name, password, redirection settings; anything else only if it turns out
-  to be needed.
+  to be needed. For a VM the form shows the Hyper-V host (`localhost` by default), the VM ID and an
+  "Enhanced session" check box instead of the user name and password; for a basic session the
+  redirection settings are grayed out (decided on 2026-11-17).
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
   with a collapse arrow; while there are no groups, a flat list). Two lines per connection: the name, and
-  below it the user name and address in gray. Status dot: green - connected, empty circle - not
-  connected, red - error. The whole row of the session currently on screen is highlighted. Actions
+  below it the user name and address in gray. Status dot: green - connected, yellow - connecting or
+  reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
-  menu. At the bottom there is one labeled button, "Add connection".
+  menu. At the bottom there is one labeled button, "Add connection", and next to it a "..." button
+  whose menu holds "Change master password" and "Log" (decided on 2026-11-13).
+- **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
+  them in the list, and the order is kept in the settings file. Connections without a group come
+  first. A connection dropped on a group caption goes first in that group; dragged above the first
+  caption, it leaves its group. A group appears when a connection names it and disappears with its
+  last connection. Collapsed groups are not remembered between runs.
+- **Password fields** have a "Show password" check box, off by default, that shows the typed text
+  (decided on 2026-11-13). A saved connection password is never loaded into the form, so it cannot be
+  shown.
+- **Every change is saved at once.** There is no "Save" command. If the file was changed outside the
+  application since it was read (copied from another machine), saving asks whether to read the file
+  again (the change just made is lost) or overwrite it (decided on 2026-11-13). The file is not
+  watched.
 - **No tabs.** The list replaces them: clicking a connected row switches to its session, clicking a
-  disconnected row connects.
+  disconnected row connects. After the user's own Disconnect (or a cancelled connect), a click only
+  shows the session area with "Disconnected." and a "Connect" button (decided on 2026-11-17).
 - **No bottom notification bar.** The disconnect reason and the connection progress are shown in the
   session area (with a "Reconnect" button). Settings file errors are shown in a message box. A log of
   all messages is kept in memory and opens in a separate window on demand; it is not written to disk.
-- **Session area** (proposed, no objections, not explicitly confirmed):
+- **Session area:**
   - the resolution follows the window, with no scrollbars and no stretching;
-  - the list can be hidden with one key or button, so the session takes the whole window.
+  - the list can be hidden with one key or button, so the session takes the whole window: "Hide list"
+    in the "..." menu or Ctrl+Alt+Home; a narrow strip at the left edge brings it back (decided on
+    2026-11-13).
+- **Hotkeys** (decided on 2026-11-13). They work while the focus is inside a session and do not reach
+  it: Ctrl+Alt+Break - full screen and back, Ctrl+Alt+Home - hide or show the list, Ctrl+Alt+PgDn and
+  Ctrl+Alt+PgUp - next and previous session in list order.
 
 ## Technical notes
 
@@ -94,9 +133,21 @@ Decisions made on 2026-11-12 and 2026-11-13.
   only the members in use are listed; IUnknown-only interfaces (`IMsRdpClientNonScriptable5`,
   `IMsRdpExtendedSettings`) list every vtable slot in order. The coclass is
   `MsRdpClient9NotSafeForScripting`, the oldest one with `UpdateSessionDisplaySettings`.
-- Resolution on the fly: `UpdateSessionDisplaySettings` once the size or DPI stops changing. The probe
-  calls it 300 ms after the last change, which covers dragging the border, maximizing and moving to
-  another monitor; the remote desktop follows in about 30 ms.
+- Resolution on the fly: `UpdateSessionDisplaySettings` once the size or DPI stops changing. The RDP
+  control calls it 300 ms after the last change of its size, DPI, parent or visibility, which covers
+  dragging the border, maximizing, moving to another monitor or window, and switching sessions; the
+  remote desktop follows in about 30 ms. A minimized window changes nothing. All session controls in
+  the main window stay visible and docked, the active one on top, because WinForms leaves hidden
+  controls out of layout: a hidden session kept its old resolution after the window was resized.
+- Full screen: the component runs with `ContainerHandledFullScreen`; setting its `FullScreen` property
+  makes it ask the container to go full screen, and RemoteMe moves the session control into a
+  borderless window over the current monitor (rather than changing the border of the window it came
+  from). From memory, not verified: the component then treats the session as full screen, so with the
+  default keyboard hook mode Windows key combinations go to the session.
+- Hotkeys: a low-level keyboard hook (the only place keys typed into a session pass through), active
+  only while a RemoteMe window is in the foreground; a matched key is swallowed. Hooks run newest first,
+  so the hook is installed again after each sign-in and on entering full screen, to stay ahead of the
+  component's own hook.
 - Sharpness: the application is PerMonitorV2, and the scale is passed to the session through the extended
   properties `DesktopScaleFactor` and `DeviceScaleFactor`.
 - The connection password is passed to the component directly (`ClearTextPassword`), CredSSP is enabled.
@@ -109,6 +160,13 @@ Decisions made on 2026-11-12 and 2026-11-13.
   WinForms message loop; only a low-level keyboard hook sees them.
 - `GetErrorDescription` is not reliable: for a disconnect the user started (reason 1) it returns "An
   internal error has occurred". Disconnect texts for common reasons have to be our own.
+- A Hyper-V VM is reached with the settings the stage 1 probe connected with: the host as the server,
+  port 2179, the VM ID in `PCB` (with `;EnhancedMode=1` for an enhanced session), the service class
+  `Microsoft Virtual Console Service`, CredSSP on, `NegotiateSecurityLayer` off,
+  `DisableCredentialsDelegation` on, and an empty user name and password. Credential prompts are
+  allowed only for an enhanced session, for the VM's own sign-in. A basic session keeps the VM's
+  resolution, so the window size is not sent to it. "Send Ctrl+Alt+Del" uses the component's
+  `SendKeys` with scan codes.
 
 ## Build
 
@@ -141,8 +199,9 @@ The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.
 - [ ] Which key combinations reach the application while the focus is inside the remote desktop.
       So far: the WinForms message loop sees none of them (see the technical notes), a low-level hook
       does. With the default keyboard hook mode (2, full screen only) Alt+Tab and Ctrl+Esc act on the
-      local computer in a window. The remaining checks (modes 0 and 1, and whether our hook can take a
-      combination away from the session) are moved to stage 5, where the hotkeys are made.
+      local computer in a window. Stage 5 builds the hotkeys on that hook (see the technical notes);
+      whether they work inside a session, in a window and in full screen, is checked by hand in stage 5.
+      Modes 0 and 1 were not tried: the default mode stays.
 - [x] Changing the scale on the fly (moving a window between monitors with different scales): how
       programs inside the VM behave, and whether a reconnect is needed.
       Checked on 2026-11-13, 150% and 125% monitors: no reconnect is needed. `UpdateSessionDisplaySettings`
@@ -167,15 +226,17 @@ The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.
       needs Ctrl+Alt+Del, which the physical keys send to the local computer. An enhanced session
       (`PCB` ending in `;EnhancedMode=1`) follows the window size, but asks for the guest password in a
       Windows credentials dialog; with prompts disallowed it stops after `OnConnected` and never signs
-      in. Still open, moved to stage 6: passing the guest credentials without that dialog
-      (requirement 5), sending Ctrl+Alt+Del in a basic session, and a remote Hyper-V host.
+      in. Settled on 2026-11-17 (see requirement 14): only the local host, the guest password stays
+      in the Windows dialog, and the basic session gets "Send Ctrl+Alt+Del". Stage 6 builds this into
+      the application; still to check by hand there: an enhanced and a basic session, and whether
+      "Send Ctrl+Alt+Del" reaches the guest (the probe sent it, the result was not confirmed).
 - [x] Server certificates: whether the component exposes the certificate thumbprint, so the consent can
       be stored in the settings file and travel between machines. Fallback: the component's own "do not
       ask again" option, which Windows stores in the registry on each machine separately.
       Checked on 2026-11-13: it does not. The type library has no certificate property, and
       `OnReceivedTSPublicKey` (with `NotifyTSPublicKey` on) was not raised in six connections with NLA;
-      from memory, it belongs to the old RDP security layer. Unless we check the certificate ourselves
-      (see open questions), the fallback applies. Consent given in mstsc is shared with the component.
+      from memory, it belongs to the old RDP security layer. The fallback applies (decided on
+      2026-11-17, requirement 12). Consent given in mstsc is shared with the component.
 - [x] Automatic reconnect: what the component does by itself and what we have to handle.
       Checked on 2026-11-13: with `EnableAutoReconnect` the component reconnects by itself after a
       network loss (`OnAutoReconnecting2`, then `OnAutoReconnected` and `OnLoginComplete`; 19 seconds in
@@ -188,20 +249,8 @@ The last command produces one self-contained `src/RemoteMe/bin/publish/RemoteMe.
 
 ## Open questions
 
-- Hotkeys: hide and show the list, next session, full screen.
-- Where to put "Change master password" and "Log" (proposed: at the bottom of the list, next to "Add
-  connection").
 - Whether one session stretched across several monitors is needed (a separate RDP feature, full screen
   only).
-- What to do if the settings file changes on disk while the application is open (copied from another
-  machine).
-- Server certificates (requirement 12): accept the per-machine fallback, or read the certificate
-  ourselves before connecting and keep the consent in the settings file. Decide before stage 6.
-- Hyper-V guests: the component takes no separate guest credentials, so an enhanced session asks for
-  the guest password in a Windows dialog, and requirement 5 is not met for such connections. Accept
-  the dialog for them, or look further (for example, credentials saved in Windows for the time of a
-  connection, not verified). Decide in stage 6.
-
 ## Findings along the way
 
 - **PIN does not work in a Hyper-V enhanced session** by design: this mode runs over RDP. In the VM,

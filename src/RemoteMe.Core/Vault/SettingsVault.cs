@@ -71,17 +71,22 @@ public sealed class SettingsVault : IDisposable {
         }
     }
 
-    public void Save(Settings settings) {
+    // With overwrite set, a file changed outside the vault is replaced instead of reporting a conflict.
+    public void Save(Settings settings, bool overwrite = false) {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        EnsureFileUnchanged();
+        if (!overwrite) {
+            EnsureFileUnchanged();
+        }
         _fileHash = WriteFile(Path, _key, _iterations, _salt, Revision + 1, settings);
         Revision++;
     }
 
-    public void ChangePassword(string newPassword, Settings settings) {
+    public void ChangePassword(string newPassword, Settings settings, bool overwrite = false) {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrEmpty(newPassword);
-        EnsureFileUnchanged();
+        if (!overwrite) {
+            EnsureFileUnchanged();
+        }
         var iterations = Math.Max(_iterations, _policy.Iterations);
         var salt = RandomNumberGenerator.GetBytes(VaultHeader.SaltSize);
         var key = VaultKey.Derive(newPassword, iterations, salt);

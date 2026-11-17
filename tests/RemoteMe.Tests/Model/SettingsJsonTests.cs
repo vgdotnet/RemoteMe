@@ -11,7 +11,7 @@ public sealed class SettingsJsonTests {
         var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
 
         Assert.Equal(
-            "{\"schemaVersion\":1,\"connections\":["
+            "{\"schemaVersion\":1,\"groups\":[\"Lab\"],\"connections\":["
             + "{\"id\":\"6f1c2b8e-4a1d-4c3e-9b7a-2d5e8f0a1b3c\",\"name\":\"Build server\",\"group\":\"Lab\","
             + "\"kind\":\"Network\",\"address\":\"build.example.test\",\"userName\":\"test-user\",\"password\":\"secret\","
             + "\"redirection\":{\"clipboard\":true,\"audio\":true,\"microphone\":false,\"drives\":true,\"printers\":false}},"
@@ -19,6 +19,18 @@ public sealed class SettingsJsonTests {
             + "\"vmId\":\"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\",\"userName\":\"\","
             + "\"redirection\":{\"clipboard\":true,\"audio\":true,\"microphone\":true,\"drives\":false,\"printers\":false}}]}",
             json);
+    }
+
+    [Fact]
+    public void BasicSession_IsWrittenOnlyWhenOn() {
+        var vm = SampleData.Settings().Connections[1] with { BasicSession = true };
+        var settings = new Settings { Connections = [vm] };
+
+        var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
+        var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
+
+        Assert.Contains("\"basicSession\":true", json, StringComparison.Ordinal);
+        Assert.True(Assert.Single(loaded!.Connections).BasicSession);
     }
 
     [Fact]

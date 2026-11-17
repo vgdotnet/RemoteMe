@@ -44,6 +44,18 @@ public sealed class SettingsVaultTests : IDisposable {
         AssertOpenFails(VaultError.WrongPassword, "not the password");
     }
 
+    [Theory]
+    [InlineData("пароль на русском")]
+    [InlineData(" spaces at both ends ")]
+    [InlineData("Mixed ЯЗЫКИ 123 !@#$%^&*()")]
+    public void Open_WithTheSamePassword_WorksForAnyText(string password) {
+        SettingsVault.Create(FilePath, password, SampleData.Settings(), FastPolicy).Dispose();
+
+        using var vault = SettingsVault.Open(FilePath, password, FastPolicy, out _);
+
+        Assert.Throws<VaultException>(() => SettingsVault.Open(FilePath, password.Trim() + "x", FastPolicy, out _));
+    }
+
     [Fact]
     public void Open_WithDifferentUnicodeNormalization_AcceptsThePassword() {
         SettingsVault.Create(FilePath, "café au lait", SampleData.Settings(), FastPolicy).Dispose();
@@ -177,6 +189,21 @@ public sealed class SettingsVaultTests : IDisposable {
 
         Assert.Equal(VaultError.Conflict, error.Error);
         Assert.Equal(afterSecond, File.ReadAllBytes(FilePath));
+    }
+
+    [Fact]
+    public void Save_WithOverwrite_ReplacesAFileChangedOnDisk() {
+        CreateFile();
+        using var first = SettingsVault.Open(FilePath, Password, FastPolicy, out var settings);
+        using (var second = SettingsVault.Open(FilePath, Password, FastPolicy, out _)) {
+            second.Save(new Settings());
+        }
+
+        first.Save(settings, overwrite: true);
+
+        using var reopened = SettingsVault.Open(FilePath, Password, FastPolicy, out var loaded);
+        SampleData.AssertSame(settings, loaded);
+        first.Save(settings);
     }
 
     [Fact]

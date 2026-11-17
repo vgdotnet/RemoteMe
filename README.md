@@ -5,8 +5,8 @@ the remote desktop resolution follows the window size, the picture stays sharp a
 and the interface contains only the connection list and the session itself.
 
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-17: stages 0-7 done, v0.1.0 released; releases are not signed (see the code
-  signing policy)
+- Status as of 2026-11-17: stages 0-7 done, v0.2.0 released (full screen with the list, a livelier
+  connection list, the application icon); releases are not signed (see the code signing policy)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org); the name is
   kept (decided on 2026-11-17)

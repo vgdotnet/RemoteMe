@@ -12,6 +12,8 @@ namespace RemoteMe.UI;
 internal sealed class MainForm : Form {
     private const string LogSource = "Settings";
     private const string ReturnText = "Return to main window";
+    private const string FullScreenGlyph = "";
+    private const string WindowGlyph = "";
 
     private readonly SettingsStore _store;
     private readonly AppLog _log;
@@ -22,6 +24,8 @@ internal sealed class MainForm : Form {
     private readonly Button _listStrip;
     private readonly ToolTip _toolTip = new();
     private readonly Font _stripFont;
+    private readonly Button _fullScreenButton;
+    private readonly Font _glyphFont;
     private readonly ConnectionList _list;
     private readonly SessionView _mainView;
     private readonly ContextMenuStrip _connectionMenu;
@@ -34,6 +38,9 @@ internal sealed class MainForm : Form {
     private HotkeyHook? _hotkeys;
     private Guid? _menuConnectionId;
     private LogForm? _logForm;
+    private bool _mainFullScreen;
+    private Rectangle _windowedBounds;
+    private bool _windowedMaximized;
     private bool _closing;
 
     public MainForm(SettingsStore store, AppLog log) {
@@ -51,18 +58,23 @@ internal sealed class MainForm : Form {
 
         _list = new ConnectionList { Dock = DockStyle.Fill };
         var addButton = new Button { Text = "Add connection", Height = 32, Anchor = AnchorStyles.Left | AnchorStyles.Right };
+        _fullScreenButton = new Button { Size = new Size(40, 32) };
+        _fullScreenButton.Font = _glyphFont = new Font("Segoe MDL2 Assets", _fullScreenButton.Font.Size);
+        ShowMainFullScreenState();
         var moreButton = new Button { Text = "...", Size = new Size(40, 32), AccessibleName = "More commands" };
         var bottomBar = new TableLayoutPanel {
             Dock = DockStyle.Bottom,
             AutoSize = true,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             Padding = new Padding(6),
         };
         bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         bottomBar.Controls.Add(addButton, 0, 0);
-        bottomBar.Controls.Add(moreButton, 1, 0);
+        bottomBar.Controls.Add(_fullScreenButton, 1, 0);
+        bottomBar.Controls.Add(moreButton, 2, 0);
 
         _mainView = new SessionView();
         _split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
@@ -109,6 +121,7 @@ internal sealed class MainForm : Form {
         _sessions.SessionChanged += (_, id) => OnSessionChanged(id);
         _list.StatusOf = StatusOf;
         addButton.Click += (_, _) => AddConnection();
+        _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
         moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
         _listStrip.Click += (_, _) => ToggleList();
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
@@ -159,6 +172,7 @@ internal sealed class MainForm : Form {
     protected override void OnFormClosed(FormClosedEventArgs e) {
         _toolTip.Dispose();
         _stripFont.Dispose();
+        _glyphFont.Dispose();
         base.OnFormClosed(e);
     }
 
@@ -476,6 +490,35 @@ internal sealed class MainForm : Form {
     private void ToggleList() {
         _split.Panel1Collapsed = !_split.Panel1Collapsed;
         _listStrip.Visible = _split.Panel1Collapsed;
+    }
+
+    // The main window covers its monitor, taskbar included, with no title bar; the list stays. Only the
+    // border style changes, so the window and its session controls are kept.
+    private void ToggleMainFullScreen() {
+        if (_mainFullScreen) {
+            WindowState = FormWindowState.Normal;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            Bounds = _windowedBounds;
+            if (_windowedMaximized) {
+                WindowState = FormWindowState.Maximized;
+            }
+        } else {
+            _windowedMaximized = WindowState == FormWindowState.Maximized;
+            _windowedBounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            var monitor = Screen.FromControl(this).Bounds;
+            WindowState = FormWindowState.Normal;
+            FormBorderStyle = FormBorderStyle.None;
+            Bounds = monitor;
+        }
+        _mainFullScreen = !_mainFullScreen;
+        ShowMainFullScreenState();
+    }
+
+    private void ShowMainFullScreenState() {
+        var name = _mainFullScreen ? "Back to a window" : "Full screen with the list";
+        _fullScreenButton.Text = _mainFullScreen ? WindowGlyph : FullScreenGlyph;
+        _fullScreenButton.AccessibleName = name;
+        _toolTip.SetToolTip(_fullScreenButton, name);
     }
 
     private void OnHotkey(Hotkey hotkey) {

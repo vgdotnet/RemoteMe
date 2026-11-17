@@ -95,7 +95,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
   menu. At the bottom there is one labeled button, "Add connection", and next to it a "..." button
-  whose menu holds "Change master password" and "Log" (decided on 2026-11-13).
+  whose menu holds "Change master password" and "Log" (decided on 2026-11-13). Between them is a
+  full-screen button with an icon (see the session area; decided on 2026-11-17).
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first
@@ -118,7 +119,12 @@ Decisions made on 2026-11-12 and 2026-11-13.
   - the resolution follows the window, with no scrollbars and no stretching;
   - the list can be hidden with one key or button, so the session takes the whole window: "Hide list"
     in the "..." menu or Ctrl+Alt+Home; a narrow strip at the left edge brings it back (decided on
-    2026-11-13).
+    2026-11-13);
+  - the main window can go full screen with the list: the full-screen button at the bottom of the list
+    makes the window cover its monitor, taskbar included, without a title bar, and the list stays.
+    The same button returns it to a window of the size it had, maximized or not (decided on
+    2026-11-17). This is not a session's own full screen (requirement 8), which shows the session
+    alone.
 - **Hotkeys** (decided on 2026-11-13). They work while the focus is inside a session and do not reach
   it: Ctrl+Alt+Break - full screen and back, Ctrl+Alt+Home - hide or show the list, Ctrl+Alt+PgDn and
   Ctrl+Alt+PgUp - next and previous session in list order.
@@ -144,6 +150,9 @@ Decisions made on 2026-11-12 and 2026-11-13.
   borderless window over the current monitor (rather than changing the border of the window it came
   from). From memory, not verified: the component then treats the session as full screen, so with the
   default keyboard hook mode Windows key combinations go to the session.
+- Full screen with the list changes the main window itself: no border, and bounds equal to the
+  monitor's. Changing the border style keeps the window handle (checked on 2026-11-17), so the session
+  controls inside are not re-created. The taskbar stays below the window while it is in the foreground.
 - Hotkeys: a low-level keyboard hook (the only place keys typed into a session pass through), active
   only while a RemoteMe window is in the foreground; a matched key is swallowed. Hooks run newest first,
   so the hook is installed again after each sign-in and on entering full screen, to stay ahead of the

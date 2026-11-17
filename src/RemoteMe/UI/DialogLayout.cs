@@ -21,6 +21,7 @@ internal static class DialogLayout {
         form.StartPosition = FormStartPosition.CenterParent;
         form.Padding = new Padding(12);
         form.Text = title;
+        form.Icon = AppIcon.Value;
     }
 
     public static TableLayoutPanel CreateGrid(int columns) {

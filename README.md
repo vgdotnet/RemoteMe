@@ -128,6 +128,10 @@ Decisions made on 2026-11-12 and 2026-11-13.
     The same button returns it to a window of the size it had, maximized or not (decided on
     2026-11-17). This is not a session's own full screen (requirement 8), which shows the session
     alone.
+- **Application icon** (chosen on 2026-11-17): a white monitor with the letter R on a teal tile,
+  option B of the four kept in [docs/icons](docs/icons). `src/RemoteMe/Assets/RemoteMe.ico` (16 to 256
+  pixels) is drawn by `dotnet run tools/MakeIcon.cs`, run from the repository root; the exe and every
+  window use it.
 - **Hotkeys** (decided on 2026-11-13). They work while the focus is inside a session and do not reach
   it: Ctrl+Alt+Break - full screen and back, Ctrl+Alt+Home - hide or show the list, Ctrl+Alt+PgDn and
   Ctrl+Alt+PgUp - next and previous session in list order.

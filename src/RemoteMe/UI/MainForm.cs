@@ -57,6 +57,7 @@ internal sealed class MainForm : Form {
         MinimumSize = new Size(640, 400);
         StartPosition = FormStartPosition.CenterScreen;
         Text = Messages.Title;
+        Icon = AppIcon.Value;
 
         _list = new ConnectionList { Dock = DockStyle.Fill };
         _glyphFont = new Font("Segoe MDL2 Assets", 11f);

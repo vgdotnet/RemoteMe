@@ -20,6 +20,7 @@ internal sealed class FullScreenWindow : Form {
         Bounds = monitorBounds;
         BackColor = Color.Black;
         Text = title;
+        Icon = AppIcon.Value;
         View = new SessionView();
         Controls.Add(View);
         ResumeLayout(false);

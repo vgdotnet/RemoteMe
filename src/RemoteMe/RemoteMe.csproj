@@ -8,6 +8,7 @@
     <ApplicationVisualStyles>true</ApplicationVisualStyles>
     <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <ApplicationIcon>Assets\RemoteMe.ico</ApplicationIcon>
     <Product>RemoteMe</Product>
     <!-- SignPath checks that the exe's product version is the release version, so no commit hash in it. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -15,6 +16,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemoteMe.Core\RemoteMe.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\RemoteMe.ico" LogicalName="RemoteMe.ico" />
   </ItemGroup>
 
 </Project>

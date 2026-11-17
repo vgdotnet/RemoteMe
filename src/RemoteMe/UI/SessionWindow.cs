@@ -19,6 +19,7 @@ internal sealed class SessionWindow : Form {
         Bounds = bounds;
         MinimumSize = new Size(320, 240);
         Text = title;
+        Icon = AppIcon.Value;
         View = new SessionView();
         Controls.Add(View);
         ResumeLayout(false);

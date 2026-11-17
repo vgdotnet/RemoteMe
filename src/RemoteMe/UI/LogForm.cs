@@ -22,6 +22,7 @@ internal sealed class LogForm : Form {
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
         Text = "RemoteMe log";
+        Icon = AppIcon.Value;
 
         _entries = new ListView {
             Dock = DockStyle.Fill,

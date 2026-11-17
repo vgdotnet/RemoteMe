@@ -4,6 +4,10 @@ A Windows application (.NET 10, WinForms) built on the standard RDP component th
 the remote desktop resolution follows the window size, the picture stays sharp at any display scale,
 and the interface contains only the connection list and the session itself.
 
+- Download: [RemoteMe.exe](https://github.com/vgdotnet/RemoteMe/releases/latest/download/RemoteMe.exe)
+  from the [latest release](https://github.com/vgdotnet/RemoteMe/releases/latest). No installation: put
+  the exe in any folder, and the settings file is created next to it. To check the download, see
+  "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
 - Status as of 2026-11-17: stages 0-7 done, v0.3.0 released (a clock with a chosen time zone above the
   list buttons; v0.2.0 added full screen with the list, a livelier connection list and the

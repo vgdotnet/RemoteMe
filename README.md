@@ -100,6 +100,14 @@ Decisions made on 2026-11-12 and 2026-11-13.
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
   and "Log" (decided on 2026-11-13).
+- **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
+  line and the buttons: the time of the chosen time zone in large digits, without seconds, with its UTC
+  offset on the right; under it the zone's main city and the date. The city comes from the zone's IANA
+  name, since Windows names a zone by several cities: "Brussels, Copenhagen, Madrid, Paris" shows
+  Paris. A click on the clock, or "Clock time zone..." in the "..." menu, opens a window with the
+  Windows time zones and a search box that finds a city or a UTC offset (+7, -3:30); the first line is
+  the local time of Windows, the default. The zone is kept in the settings file; a file without it
+  shows the local time.
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first

@@ -29,6 +29,7 @@ internal sealed class MainForm : Form {
     private readonly Button _fullScreenButton;
     private readonly Font _glyphFont;
     private readonly ConnectionList _list;
+    private readonly ClockPanel _clock;
     private readonly SessionView _mainView;
     private readonly ContextMenuStrip _connectionMenu;
     private readonly ToolStripMenuItem _disconnectItem;
@@ -81,11 +82,13 @@ internal sealed class MainForm : Form {
         bottomBar.Controls.Add(_fullScreenButton, 2, 0);
         bottomBar.Controls.Add(moreButton, 3, 0);
         var bottomLine = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Palette.Separator };
+        _clock = new ClockPanel { Dock = DockStyle.Bottom };
 
         _mainView = new SessionView();
         _split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
         _split.Panel1.Controls.Add(_list);
         _split.Panel1.Controls.Add(bottomLine);
+        _split.Panel1.Controls.Add(_clock);
         _split.Panel1.Controls.Add(bottomBar);
         _split.Panel2.Controls.Add(_mainView);
         _listStrip = new Button {
@@ -120,6 +123,7 @@ internal sealed class MainForm : Form {
 
         _moreMenu = new ContextMenuStrip();
         _moreMenu.Items.Add(new ToolStripMenuItem("Hide list", null, (_, _) => ToggleList()) { ShortcutKeyDisplayString = "Ctrl+Alt+Home" });
+        _moreMenu.Items.Add("Clock time zone...", null, (_, _) => ChooseClockTimeZone());
         _moreMenu.Items.Add("Change master password...", null, (_, _) => ChangeMasterPassword());
         _moreMenu.Items.Add("Log", null, (_, _) => ShowLog());
 
@@ -128,6 +132,7 @@ internal sealed class MainForm : Form {
         _sessions.SessionChanged += (_, id) => OnSessionChanged(id);
         _list.StatusOf = StatusOf;
         addButton.Click += (_, _) => AddConnection();
+        _clock.Click += (_, _) => ChooseClockTimeZone();
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
         moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
         _listStrip.Click += (_, _) => ToggleList();
@@ -215,6 +220,8 @@ internal sealed class MainForm : Form {
         }
         _sessions.CloseMissing(ids);
         _list.ShowSettings(_store.Current);
+        _clock.ZoneId = _store.Current.ClockTimeZone;
+        _toolTip.SetToolTip(_clock, $"{_clock.ZoneName}\nClick to change the time zone.");
         if (FindConnection(_list.ActiveConnectionId) is null) {
             _list.ActiveConnectionId = null;
         }
@@ -650,6 +657,14 @@ internal sealed class MainForm : Form {
             : $"Delete the connection \"{connection.Name}\"?";
         if (Messages.Confirm(this, question)) {
             Save(s => SettingsEditor.RemoveConnection(s, connection.Id));
+        }
+    }
+
+    private void ChooseClockTimeZone() {
+        using var form = new TimeZoneForm(_store.Current.ClockTimeZone);
+        if (form.ShowDialog(this) == DialogResult.OK && form.ZoneId != _store.Current.ClockTimeZone) {
+            var zoneId = form.ZoneId;
+            Save(s => s with { ClockTimeZone = zoneId });
         }
     }
 

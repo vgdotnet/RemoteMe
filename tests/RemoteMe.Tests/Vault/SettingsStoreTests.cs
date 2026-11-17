@@ -64,6 +64,17 @@ public sealed class SettingsStoreTests : IDisposable {
     }
 
     [Fact]
+    public void Apply_KeepsTheClockTimeZoneForTheNextOpen() {
+        using (var store = SettingsStore.Create(FilePath, Password, FastPolicy)) {
+            store.Apply(s => s with { ClockTimeZone = "GMT Standard Time" });
+            store.Apply(s => SettingsEditor.AddConnection(s, SampleData.Connection("Alpha")));
+        }
+
+        using var reopened = SettingsStore.Open(FilePath, Password, FastPolicy);
+        Assert.Equal("GMT Standard Time", reopened.Current.ClockTimeZone);
+    }
+
+    [Fact]
     public void Reload_ReadsChangesMadeOutside() {
         using var store = SettingsStore.Create(FilePath, Password, FastPolicy);
         using (var other = SettingsStore.Open(FilePath, Password, FastPolicy)) {

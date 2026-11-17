@@ -34,6 +34,36 @@ public sealed class SettingsJsonTests {
     }
 
     [Fact]
+    public void ClockTimeZone_IsTheLocalTimeByDefaultAndLeftOutOfTheFile() {
+        var settings = new Settings();
+
+        var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
+
+        Assert.Null(settings.ClockTimeZone);
+        Assert.DoesNotContain("clockTimeZone", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ClockTimeZone_IsWrittenAndReadBack() {
+        var settings = SampleData.Settings() with { ClockTimeZone = "N. Central Asia Standard Time" };
+
+        var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
+        var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
+
+        Assert.Contains("\"clockTimeZone\":\"N. Central Asia Standard Time\"", json, StringComparison.Ordinal);
+        Assert.Equal("N. Central Asia Standard Time", loaded!.ClockTimeZone);
+    }
+
+    [Fact]
+    public void Deserialize_AFileWithoutClockTimeZone_ShowsTheLocalTime() {
+        const string json = "{\"schemaVersion\":1,\"groups\":[],\"connections\":[]}";
+
+        var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
+
+        Assert.Null(loaded!.ClockTimeZone);
+    }
+
+    [Fact]
     public void Deserialize_RestoresPasswordsThatNeedEscaping() {
         var settings = SampleData.Settings();
 

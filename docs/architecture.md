@@ -89,7 +89,7 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | UI | RemoteMe | Unlock window, main window (list, session view with a status overlay), separate session window, full-screen window, connection form, password prompt for a connection, log window |
 | Input | RemoteMe | `HotkeyHook`: low-level keyboard hook for the hotkeys while the focus is inside the remote desktop |
 | App | RemoteMe | Entry point, manual wiring of dependencies, single instance, unhandled error handling |
-| Build | - | Single-file publish profile; GitHub Actions: build, tests and formatting on every push (`build.yml`), a release with the exe and its SHA-256 for each `vX.Y.Z` tag (`release.yml`) |
+| Build | - | Single-file publish profile; GitHub Actions: build, tests and formatting on every push (`build.yml`), a release with the exe and its SHA-256 for each `vX.Y.Z` tag (`release.yml`), signed through SignPath when configured |
 
 ## Platform conventions
 
@@ -124,5 +124,5 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | Untrusted server certificate, man-in-the-middle attack | Require NLA; the component warns on the first connection and Windows remembers the consent on each machine (requirement 12) |
 | RDP bitmap cache on disk and traces in the registry | Turn off the persistent cache; describe the registry traces in the README |
 | Clipboard and drives shared between sessions of different clients | Redirection is set per connection, drives are off by default (requirement 13) |
-| A replaced unsigned exe in a synced folder | A SHA-256 checksum with every release; the exe is not signed (decided on 2026-11-17) |
+| A replaced unsigned exe in a synced folder | A SHA-256 checksum with every release; signing through SignPath Foundation once the project is accepted (decided on 2026-11-17), unsigned until then |
 | Public repository | No real addresses or user names in tests and screenshots |

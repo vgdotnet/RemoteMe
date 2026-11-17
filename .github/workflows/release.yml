@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 defaults:
   run:
@@ -39,24 +40,74 @@ jobs:
           VERSION: ${{ steps.version.outputs.number }}
         run: dotnet publish src/RemoteMe/RemoteMe.csproj -p:PublishProfile=SingleFile "-p:Version=$env:VERSION"
 
+      - name: Check the publish folder
+        run: |
+          $files = @(Get-ChildItem 'src/RemoteMe/bin/publish' -File)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'RemoteMe.exe') {
+            throw "The publish folder must hold only RemoteMe.exe, found: $($files.Name -join ', ')"
+          }
+
+      # Signing starts once SignPath Foundation has approved the project and the repository variables
+      # are set (README, "Code signing policy"); until then releases are not signed.
+      - name: Upload the exe for signing
+        id: unsigned
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned
+          path: src/RemoteMe/bin/publish/RemoteMe.exe
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Sign with SignPath
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.number) }}
+          wait-for-completion: true
+          # Every signing request is approved by hand in SignPath.
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+
+      - name: Check the signature
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: |
+          $signature = Get-AuthenticodeSignature 'signed/RemoteMe.exe'
+          if ($signature.Status -ne 'Valid') {
+            throw "The signed exe has no valid signature: $($signature.Status). $($signature.StatusMessage)"
+          }
+          "Signed by $($signature.SignerCertificate.Subject)"
+          Copy-Item 'signed/RemoteMe.exe' 'src/RemoteMe/bin/publish/RemoteMe.exe' -Force
+
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.number }}
+          SIGNED: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
         run: |
           # Absolute, since .NET methods resolve relative paths against the process directory.
           $dir = (Resolve-Path 'src/RemoteMe/bin/publish').Path
-          $files = @(Get-ChildItem $dir -File)
-          if ($files.Count -ne 1 -or $files[0].Name -ne 'RemoteMe.exe') {
-            throw "The publish folder must hold only RemoteMe.exe, found: $($files.Name -join ', ')"
-          }
           $hash = (Get-FileHash "$dir/RemoteMe.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
           [IO.File]::WriteAllText("$dir/RemoteMe.exe.sha256", "$hash  RemoteMe.exe`n")
-          $notes = @"
-          RemoteMe $env:VERSION for Windows 10 22H2 and Windows 11, x64: one portable exe, not signed.
-
-          SHA-256 of RemoteMe.exe: $hash
-          "@
+          $signing = if ($env:SIGNED -eq 'true') {
+            'Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).'
+          } else {
+            'This build is not signed.'
+          }
+          $notes = @(
+            "RemoteMe $env:VERSION for Windows 10 22H2 and Windows 11, x64: one portable exe."
+            ''
+            $signing
+            "Code signing policy: https://github.com/$env:GITHUB_REPOSITORY#code-signing-policy"
+            ''
+            "SHA-256 of RemoteMe.exe: $hash"
+          ) -join "`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes)
           gh release create $env:GITHUB_REF_NAME "$dir/RemoteMe.exe" "$dir/RemoteMe.exe.sha256" `
             --verify-tag --title "RemoteMe $env:VERSION" --notes-file "$env:RUNNER_TEMP/notes.md" --generate-notes

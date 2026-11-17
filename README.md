@@ -195,9 +195,50 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The exe is not signed, so Windows SmartScreen warns about an unknown publisher the first time a
-downloaded copy is started. To check a download, compare the output of `Get-FileHash RemoteMe.exe`
-(PowerShell) with the hash in `RemoteMe.exe.sha256` and in the release notes.
+To check a download, compare the output of `Get-FileHash RemoteMe.exe` (PowerShell) with the hash in
+`RemoteMe.exe.sha256` and in the release notes.
+
+Signing goes through SignPath Foundation, free for open source projects (decided on 2026-11-17; see
+the code signing policy below). The release workflow signs the exe only when the repository variable
+`SIGNPATH_ORGANIZATION_ID` is set. It then also needs the variables `SIGNPATH_PROJECT_SLUG` and
+`SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`, waits up to an hour for the signing
+request to be approved in SignPath, checks the signature and releases the signed exe. Without the
+variable the release is not signed, and the release notes say so. An unsigned exe makes Windows
+SmartScreen warn about an unknown publisher; a signed one stops the warning only once the publisher
+has built up reputation.
+
+The artifact configuration in SignPath (the workflow uploads `RemoteMe.exe` as the only file of a
+GitHub artifact and passes the version from the tag):
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="RemoteMe.exe" product-name="RemoteMe" product-version="${version}">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
+```
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+Status as of 2026-11-17: the project is applying to SignPath Foundation. Until it is accepted,
+releases are not signed; the notes of each release say whether its exe is signed.
+
+- Committers and reviewers: [vgdotnet](https://github.com/vgdotnet)
+- Approvers: [vgdotnet](https://github.com/vgdotnet)
+
+Releases are built from the tagged source by GitHub Actions (`.github/workflows/release.yml`) on
+GitHub-hosted runners, and every signing request is approved by hand.
+
+Privacy policy: This program will not transfer any information to other networked systems unless
+specifically requested by the user or the person installing or operating it.
 
 ## To verify during implementation
 

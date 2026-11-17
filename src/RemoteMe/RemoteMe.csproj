@@ -8,6 +8,9 @@
     <ApplicationVisualStyles>true</ApplicationVisualStyles>
     <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Product>RemoteMe</Product>
+    <!-- SignPath checks that the exe's product version is the release version, so no commit hash in it. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

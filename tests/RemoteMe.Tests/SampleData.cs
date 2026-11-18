@@ -41,6 +41,7 @@ internal static class SampleData {
     public static void AssertSame(Settings expected, Settings actual) {
         Assert.Equal(expected.SchemaVersion, actual.SchemaVersion);
         Assert.Equal(expected.Groups, actual.Groups);
+        Assert.Equal(expected.CollapsedGroups, actual.CollapsedGroups);
         Assert.Equal(expected.Connections.Count, actual.Connections.Count);
         foreach (var (expectedConnection, actualConnection) in expected.Connections.Zip(actual.Connections)) {
             Assert.Equal(expectedConnection with { Password = null }, actualConnection with { Password = null });

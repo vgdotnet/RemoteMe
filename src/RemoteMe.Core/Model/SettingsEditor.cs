@@ -1,7 +1,7 @@
 namespace RemoteMe.Core.Model;
 
 // Pure edits of the settings. Every result is normalized: group names are trimmed, every group in use
-// is listed in Settings.Groups, and groups without connections are dropped.
+// is listed in Settings.Groups, and groups without connections are dropped, from the collapsed ones too.
 public static class SettingsEditor {
     public static Settings Normalize(Settings settings) {
         var connections = settings.Connections.Select(c => c with { Group = CleanGroup(c.Group) }).ToList();
@@ -17,7 +17,21 @@ public static class SettingsEditor {
                 groups.Add(group);
             }
         }
-        return settings with { Groups = groups, Connections = connections };
+        var collapsed = settings.CollapsedGroups
+            .Select(CleanGroup)
+            .OfType<string>()
+            .Where(used.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return settings with { Groups = groups, CollapsedGroups = collapsed, Connections = connections };
+    }
+
+    public static Settings SetGroupCollapsed(Settings settings, string group, bool collapsed) {
+        var groups = settings.CollapsedGroups.Where(g => g != group).ToList();
+        if (collapsed) {
+            groups.Add(group);
+        }
+        return Normalize(settings with { CollapsedGroups = groups });
     }
 
     public static string? CleanGroup(string? group) => string.IsNullOrWhiteSpace(group) ? null : group.Trim();

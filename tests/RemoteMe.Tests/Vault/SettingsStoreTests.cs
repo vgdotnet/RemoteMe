@@ -75,6 +75,17 @@ public sealed class SettingsStoreTests : IDisposable {
     }
 
     [Fact]
+    public void Apply_KeepsCollapsedGroupsForTheNextOpen() {
+        using (var store = SettingsStore.Create(FilePath, Password, FastPolicy)) {
+            store.Apply(s => SettingsEditor.AddConnection(s, SampleData.Connection("Alpha", "Lab")));
+            store.Apply(s => SettingsEditor.SetGroupCollapsed(s, "Lab", collapsed: true));
+        }
+
+        using var reopened = SettingsStore.Open(FilePath, Password, FastPolicy);
+        Assert.Equal(["Lab"], reopened.Current.CollapsedGroups);
+    }
+
+    [Fact]
     public void Reload_ReadsChangesMadeOutside() {
         using var store = SettingsStore.Create(FilePath, Password, FastPolicy);
         using (var other = SettingsStore.Open(FilePath, Password, FastPolicy)) {

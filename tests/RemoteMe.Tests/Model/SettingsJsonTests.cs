@@ -11,7 +11,7 @@ public sealed class SettingsJsonTests {
         var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
 
         Assert.Equal(
-            "{\"schemaVersion\":1,\"groups\":[\"Lab\"],\"connections\":["
+            "{\"schemaVersion\":1,\"groups\":[\"Lab\"],\"collapsedGroups\":[],\"connections\":["
             + "{\"id\":\"6f1c2b8e-4a1d-4c3e-9b7a-2d5e8f0a1b3c\",\"name\":\"Build server\",\"group\":\"Lab\","
             + "\"kind\":\"Network\",\"address\":\"build.example.test\",\"userName\":\"test-user\",\"password\":\"secret\","
             + "\"redirection\":{\"clipboard\":true,\"audio\":true,\"microphone\":false,\"drives\":true,\"printers\":false}},"
@@ -61,6 +61,26 @@ public sealed class SettingsJsonTests {
         var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
 
         Assert.Null(loaded!.ClockTimeZone);
+    }
+
+    [Fact]
+    public void CollapsedGroups_AreWrittenAndReadBack() {
+        var settings = SampleData.Settings() with { CollapsedGroups = ["Lab"] };
+
+        var json = JsonSerializer.Serialize(settings, ModelJsonContext.Default.Settings);
+        var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
+
+        Assert.Contains("\"collapsedGroups\":[\"Lab\"]", json, StringComparison.Ordinal);
+        Assert.Equal(["Lab"], loaded!.CollapsedGroups);
+    }
+
+    [Fact]
+    public void Deserialize_AFileWithoutCollapsedGroups_ShowsEveryGroupOpen() {
+        const string json = "{\"schemaVersion\":1,\"groups\":[],\"connections\":[]}";
+
+        var loaded = JsonSerializer.Deserialize(json, ModelJsonContext.Default.Settings);
+
+        Assert.Empty(loaded!.CollapsedGroups);
     }
 
     [Fact]

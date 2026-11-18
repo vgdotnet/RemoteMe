@@ -124,7 +124,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first
   caption, it leaves its group. A group appears when a connection names it and disappears with its
-  last connection. Collapsed groups are not remembered between runs.
+  last connection. Collapsed groups are kept in the settings file and stay collapsed at the next run
+  (decided on 2026-11-19).
 - **Password fields** have a "Show password" check box, off by default, that shows the typed text
   (decided on 2026-11-13). A saved connection password is never loaded into the form, so it cannot be
   shown.

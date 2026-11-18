@@ -68,6 +68,9 @@ internal sealed class ConnectionList : ScrollableControl {
 
     public event EventHandler<GroupMoveEventArgs>? GroupMoveRequested;
 
+    // A group was collapsed or expanded in the list; the settings keep it for the next run.
+    public event EventHandler<GroupCollapseEventArgs>? GroupCollapseChanged;
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Guid? ActiveConnectionId {
@@ -84,7 +87,8 @@ internal sealed class ConnectionList : ScrollableControl {
 
     public void ShowSettings(Settings settings) {
         _settings = settings;
-        _collapsedGroups.IntersectWith(settings.Groups);
+        _collapsedGroups.Clear();
+        _collapsedGroups.UnionWith(settings.CollapsedGroups);
         Rebuild();
     }
 
@@ -322,11 +326,15 @@ internal sealed class ConnectionList : ScrollableControl {
         Invalidate();
     }
 
+    // The group folds at once, painted before the settings file is written.
     private void ToggleGroup(string group) {
-        if (!_collapsedGroups.Remove(group)) {
-            _collapsedGroups.Add(group);
+        var collapsed = _collapsedGroups.Add(group);
+        if (!collapsed) {
+            _collapsedGroups.Remove(group);
         }
         Rebuild();
+        Update();
+        GroupCollapseChanged?.Invoke(this, new GroupCollapseEventArgs(group, collapsed));
     }
 
     private void SetFocusIndex(int index) {

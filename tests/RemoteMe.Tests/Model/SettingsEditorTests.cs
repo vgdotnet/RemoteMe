@@ -105,5 +105,30 @@ public sealed class SettingsEditorTests {
         Assert.Equal(["Office", "Lab"], settings.Groups);
     }
 
+    [Fact]
+    public void SetGroupCollapsed_CollapsesAndExpandsTheGroup() {
+        var collapsed = SettingsEditor.SetGroupCollapsed(Sample, "Office", collapsed: true);
+        var expanded = SettingsEditor.SetGroupCollapsed(collapsed, "Office", collapsed: false);
+
+        Assert.Equal(["Office"], collapsed.CollapsedGroups);
+        Assert.Empty(expanded.CollapsedGroups);
+    }
+
+    [Fact]
+    public void Normalize_KeepsOnlyCollapsedGroupsInUseOnce() {
+        var settings = SettingsEditor.Normalize(Sample with { CollapsedGroups = [" Lab ", "Lab", "Old", "  "] });
+
+        Assert.Equal(["Lab"], settings.CollapsedGroups);
+    }
+
+    [Fact]
+    public void UpdateConnection_ThatEmptiesACollapsedGroup_ForgetsTheGroup() {
+        var settings = SettingsEditor.SetGroupCollapsed(Sample, "Office", collapsed: true);
+
+        var moved = SettingsEditor.UpdateConnection(settings, Delta with { Group = "Lab" });
+
+        Assert.Empty(moved.CollapsedGroups);
+    }
+
     private static string[] Names(Settings settings) => settings.Connections.Select(c => c.Name).ToArray();
 }

@@ -149,6 +149,7 @@ internal sealed class MainForm : Form {
         };
         _list.MoveRequested += (_, e) => Save(s => SettingsEditor.MoveConnection(s, e.ConnectionId, e.Drop));
         _list.GroupMoveRequested += (_, e) => Save(s => SettingsEditor.MoveGroup(s, e.Group, e.BeforeGroup));
+        _list.GroupCollapseChanged += (_, e) => Save(s => SettingsEditor.SetGroupCollapsed(s, e.Group, e.Collapsed));
         _mainView.Overlay.PrimaryClicked += (_, _) => OnMainPrimary();
         _mainView.Overlay.SecondaryClicked += (_, _) => OnMainSecondary();
         _store.Changed += (_, _) => ShowSettings();

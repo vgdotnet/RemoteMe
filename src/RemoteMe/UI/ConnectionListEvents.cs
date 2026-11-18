@@ -25,6 +25,12 @@ internal sealed class ConnectionMoveEventArgs(Guid connectionId, ConnectionDrop 
     public ConnectionDrop Drop { get; } = drop;
 }
 
+internal sealed class GroupCollapseEventArgs(string group, bool collapsed) : EventArgs {
+    public string Group { get; } = group;
+
+    public bool Collapsed { get; } = collapsed;
+}
+
 internal sealed class GroupMoveEventArgs(string group, string? beforeGroup) : EventArgs {
     public string Group { get; } = group;
 

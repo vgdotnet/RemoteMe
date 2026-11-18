@@ -57,7 +57,9 @@ internal sealed class TimeZoneForm : Form {
         var keepId = _list.SelectedItem is ZoneItem current ? current.Id : ZoneId;
         var query = _search.Text;
         var items = new List<ZoneItem>();
-        if (_local.Text.Contains(query.Trim(), StringComparison.CurrentCultureIgnoreCase)) {
+        // The local line is found like its zone, by a city or an offset, and also by its own caption.
+        if (ClockZone.Matches(TimeZoneInfo.Local, query)
+            || ClockPanel.LocalName.Contains(query.Trim(), StringComparison.CurrentCultureIgnoreCase)) {
             items.Add(_local);
         }
         items.AddRange(_zones.Where(z => ClockZone.Matches(z, query)).Select(z => new ZoneItem(z.Id, z.DisplayName)));

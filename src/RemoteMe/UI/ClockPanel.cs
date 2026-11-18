@@ -117,6 +117,14 @@ internal sealed class ClockPanel : Control {
         Invalidate();
     }
 
+    // A Control raises Click for any mouse button; only the left one, and Enter or Space, ask for a zone.
+    protected override void OnClick(EventArgs e) {
+        if (e is MouseEventArgs { Button: not MouseButtons.Left }) {
+            return;
+        }
+        base.OnClick(e);
+    }
+
     protected override void OnKeyDown(KeyEventArgs e) {
         base.OnKeyDown(e);
         if (e.KeyCode is Keys.Enter or Keys.Space) {

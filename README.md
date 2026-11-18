@@ -96,8 +96,9 @@ Decisions made on 2026-11-12 and 2026-11-13.
   redirection settings are grayed out (decided on 2026-11-17).
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
   with a collapse arrow; while there are no groups, a flat list). The caption is a band tinted with
-  the Windows accent color, with an accent bar on the left and the number of its connections on the
-  right, and a gap above it (decided on 2026-11-17). Two lines per connection: the name, and
+  the Windows selection color (not the accent color of the Windows settings), with a bar of that
+  color on the left and the number of its connections on the right, and a gap above it (decided on
+  2026-11-17). Two lines per connection: the name, and
   below it the user name and address in gray. Status dot: green - connected, yellow - connecting or
   reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
@@ -109,9 +110,10 @@ Decisions made on 2026-11-12 and 2026-11-13.
   line and the buttons: the time of the chosen time zone in large digits, without seconds, with its UTC
   offset on the right; under it the zone's main city and the date. The city comes from the zone's IANA
   name, since Windows names a zone by several cities: "Brussels, Copenhagen, Madrid, Paris" shows
-  Paris. A click on the clock, or "Clock time zone..." in the "..." menu, opens a window with the
-  Windows time zones and a search box that finds a city or a UTC offset (+7, -3:30); the first line is
-  the local time of Windows, the default. The zone is kept in the settings file; a file without it
+  Paris. A left click on the clock, or "Clock time zone..." in the "..." menu, opens a window with the
+  Windows time zones and a search box that finds a city or a UTC offset (+7, -3:30), the offset of
+  now or the standard one; the first line is the local time of Windows, the default, and it is found
+  the same way. The zone is kept in the settings file; a file without it
   shows the local time.
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come

@@ -40,6 +40,27 @@ public sealed class ClockZoneTests {
         Assert.False(ClockZone.Matches(zone, "+7"));
     }
 
+    [Fact]
+    public void Matches_TheOffsetOfTheMomentToo() {
+        // Like Madrid: UTC+1, and UTC+2 from the last Sunday of March to the last Sunday of October.
+        var summerTime = TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(
+            DateTime.MinValue.Date,
+            DateTime.MaxValue.Date,
+            TimeSpan.FromHours(1),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 2, 0, 0), 3, 5, DayOfWeek.Sunday),
+            TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 3, 0, 0), 10, 5, DayOfWeek.Sunday));
+        var zone = TimeZoneInfo.CreateCustomTimeZone(
+            "Test Madrid", TimeSpan.FromHours(1), "(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",
+            "Romance Standard Time", "Romance Daylight Time", [summerTime]);
+        var summer = new DateTimeOffset(2026, 7, 1, 12, 0, 0, TimeSpan.Zero);
+        var winter = new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero);
+
+        Assert.True(ClockZone.Matches(zone, "+2", summer));
+        Assert.True(ClockZone.Matches(zone, "+1", summer));
+        Assert.False(ClockZone.Matches(zone, "+2", winter));
+        Assert.True(ClockZone.Matches(zone, "+1", winter));
+    }
+
     [Theory]
     [InlineData("GMT Standard Time", "London")]
     [InlineData("N. Central Asia Standard Time", "Novosibirsk")]

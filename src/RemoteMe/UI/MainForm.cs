@@ -27,6 +27,8 @@ internal sealed class MainForm : Form {
     private readonly ToolTip _toolTip = new();
     private readonly Font _stripFont;
     private readonly Button _fullScreenButton;
+    private readonly List<Button> _iconButtons = [];
+    private readonly Panel _bottomLine;
     private readonly Font _glyphFont;
     private readonly ConnectionList _list;
     private readonly ClockPanel _clock;
@@ -81,13 +83,14 @@ internal sealed class MainForm : Form {
         bottomBar.Controls.Add(addButton, 0, 0);
         bottomBar.Controls.Add(_fullScreenButton, 2, 0);
         bottomBar.Controls.Add(moreButton, 3, 0);
-        var bottomLine = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Palette.Separator };
+        _bottomLine = new Panel { Dock = DockStyle.Bottom, Height = 1 };
+        ApplyPalette();
         _clock = new ClockPanel { Dock = DockStyle.Bottom };
 
         _mainView = new SessionView();
         _split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
         _split.Panel1.Controls.Add(_list);
-        _split.Panel1.Controls.Add(bottomLine);
+        _split.Panel1.Controls.Add(_bottomLine);
         _split.Panel1.Controls.Add(_clock);
         _split.Panel1.Controls.Add(bottomBar);
         _split.Panel2.Controls.Add(_mainView);
@@ -179,6 +182,12 @@ internal sealed class MainForm : Form {
         }
         _fullScreens.Clear();
         _windows.Clear();
+    }
+
+    // The Palette colors are fixed values, so they are mixed again when Windows changes its colors.
+    protected override void OnSystemColorsChanged(EventArgs e) {
+        base.OnSystemColorsChanged(e);
+        ApplyPalette();
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e) {
@@ -540,10 +549,17 @@ internal sealed class MainForm : Form {
             AccessibleName = name,
         };
         button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = Palette.Hover;
-        button.FlatAppearance.MouseDownBackColor = Palette.Pressed;
         _toolTip.SetToolTip(button, name);
+        _iconButtons.Add(button);
         return button;
+    }
+
+    private void ApplyPalette() {
+        foreach (var button in _iconButtons) {
+            button.FlatAppearance.MouseOverBackColor = Palette.Hover;
+            button.FlatAppearance.MouseDownBackColor = Palette.Pressed;
+        }
+        _bottomLine.BackColor = Palette.Separator;
     }
 
     private void ShowMainFullScreenState() {

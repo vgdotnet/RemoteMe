@@ -1,7 +1,8 @@
 namespace RemoteMe.UI;
 
-// Colors of the connection list and its buttons, mixed from the system colors so they follow the
-// Windows theme and accent color.
+// Colors of the connection list and its buttons, mixed from the window and selection colors of Windows
+// so they follow the theme, high contrast included. The selection color is not the accent color of the
+// Windows settings.
 internal static class Palette {
     public static Color Hover => Tint(0.10);
 

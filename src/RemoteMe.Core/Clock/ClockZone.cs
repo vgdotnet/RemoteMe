@@ -40,16 +40,21 @@ public static partial class ClockZone {
             : string.Create(CultureInfo.InvariantCulture, $"UTC{sign}{hours}:{value.Minutes:00}");
     }
 
+    public static bool Matches(TimeZoneInfo zone, string query) => Matches(zone, query, DateTimeOffset.UtcNow);
+
     // A query is a word of the zone's name or city, or a UTC offset such as +7, -3:30 or UTC+5:45. An
-    // offset is compared with the zone's standard offset and with the one its name shows, since Windows
-    // names some zones by an offset they no longer have in winter.
-    public static bool Matches(TimeZoneInfo zone, string query) {
+    // offset is compared with the zone's offset at the given moment, which the clock shows, with its
+    // standard offset and with the one its name shows, since Windows names some zones by an offset they
+    // no longer have in winter.
+    public static bool Matches(TimeZoneInfo zone, string query, DateTimeOffset now) {
         query = query.Trim();
         if (query.Length == 0) {
             return true;
         }
         if (ParseOffset(OffsetQuery().Match(query)) is { } offset) {
-            return zone.BaseUtcOffset == offset || ParseOffset(NamedOffset().Match(zone.DisplayName)) == offset;
+            return zone.GetUtcOffset(now) == offset
+                || zone.BaseUtcOffset == offset
+                || ParseOffset(NamedOffset().Match(zone.DisplayName)) == offset;
         }
         return zone.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
             || CityName(zone).Contains(query, StringComparison.CurrentCultureIgnoreCase);

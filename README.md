@@ -9,9 +9,12 @@ and the interface contains only the connection list and the session itself.
   the exe in any folder, and the settings file is created next to it. To check the download, see
   "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-18: stages 0-7 done, v0.4.0 released (a click on a row only selects it, a double
-  click or Enter connects; the group captions take the accent color of the Windows settings; connection
-  names in bold; v0.3.1 fixed the clock clicks, the time zone search and the button colors; v0.3.0 added
+- Status as of 2026-11-19: stages 0-7 done, v0.5.0 released (a compact strip of circles when the list is
+  dragged narrower than the clock; collapsed groups are kept in the settings file; the clock shows the
+  date, the time, then the city with its UTC offset, and the full list gets as narrow as the clock
+  allows; the selected and the hovered row fill the whole row; v0.4.0 made a click on a row only select
+  it and a double click or Enter connect, with the group captions in the accent color of the Windows
+  settings and connection names in bold; v0.3.1 fixed the clock clicks, the time zone search and the button colors; v0.3.0 added
   a clock with a chosen time zone above the list buttons; v0.2.0 added full screen with the list, a
   livelier connection list and the application icon); releases are not signed (see the code signing
   policy)

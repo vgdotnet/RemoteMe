@@ -9,9 +9,11 @@ and the interface contains only the connection list and the session itself.
   the exe in any folder, and the settings file is created next to it. To check the download, see
   "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-17: stages 0-7 done, v0.3.0 released (a clock with a chosen time zone above the
-  list buttons; v0.2.0 added full screen with the list, a livelier connection list and the
-  application icon); releases are not signed (see the code signing policy)
+- Status as of 2026-11-18: stages 0-7 done, v0.3.1 released (fixes: only a left click opens the clock's
+  time zone window, the time zone search finds the offset of now, the button colors follow a change of
+  the Windows colors; v0.3.0 added a clock with a chosen time zone above the list buttons; v0.2.0 added
+  full screen with the list, a livelier connection list and the application icon); releases are not
+  signed (see the code signing policy)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Name: as far as we remember, RemoteMe is also the name of an IoT platform (remoteme.org); the name is
   kept (decided on 2026-11-17)

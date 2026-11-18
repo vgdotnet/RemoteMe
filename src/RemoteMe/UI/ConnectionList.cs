@@ -26,6 +26,7 @@ internal sealed class ConnectionList : ScrollableControl {
     private bool _hoverOnMenuButton;
     private int _focusIndex = -1;
     private int _pressIndex = -1;
+    private int _pressClicks;
     private Point _pressPoint;
     private bool _dragging;
     private int _dropIndex = -1;
@@ -54,6 +55,9 @@ internal sealed class ConnectionList : ScrollableControl {
         AccessibleName = "Connections";
         UpdateMetrics();
     }
+
+    // A click or Space selects a connection; a double click or Enter also asks to connect it.
+    public event EventHandler<ConnectionEventArgs>? ConnectionSelected;
 
     public event EventHandler<ConnectionEventArgs>? ConnectionActivated;
 
@@ -157,6 +161,7 @@ internal sealed class ConnectionList : ScrollableControl {
         SetFocusIndex(index);
         if (e.Button == MouseButtons.Left) {
             _pressIndex = index;
+            _pressClicks = e.Clicks;
             _pressPoint = e.Location;
         } else if (e.Button == MouseButtons.Right && _rows[index] is ConnectionRow row) {
             MenuRequested?.Invoke(this, new ConnectionMenuEventArgs(row.Connection, PointToScreen(e.Location)));
@@ -200,7 +205,7 @@ internal sealed class ConnectionList : ScrollableControl {
                 MenuRequested?.Invoke(this, new ConnectionMenuEventArgs(row.Connection, PointToScreen(new Point(button.Left, button.Bottom))));
                 break;
             case ConnectionRow row:
-                ConnectionActivated?.Invoke(this, new ConnectionEventArgs(row.Connection));
+                (_pressClicks > 1 ? ConnectionActivated : ConnectionSelected)?.Invoke(this, new ConnectionEventArgs(row.Connection));
                 break;
         }
     }
@@ -266,8 +271,11 @@ internal sealed class ConnectionList : ScrollableControl {
             case Keys.Enter or Keys.Space when focused is GroupRow group:
                 ToggleGroup(group.Name);
                 break;
-            case Keys.Enter or Keys.Space when focused is ConnectionRow row:
+            case Keys.Enter when focused is ConnectionRow row:
                 ConnectionActivated?.Invoke(this, new ConnectionEventArgs(row.Connection));
+                break;
+            case Keys.Space when focused is ConnectionRow row:
+                ConnectionSelected?.Invoke(this, new ConnectionEventArgs(row.Connection));
                 break;
             case Keys.Delete when focused is ConnectionRow row:
                 DeleteRequested?.Invoke(this, new ConnectionEventArgs(row.Connection));
@@ -465,7 +473,9 @@ internal sealed class ConnectionList : ScrollableControl {
         using (var brush = new SolidBrush(index == _hoverIndex && !_dragging ? Palette.GroupBandHover : Palette.GroupBand)) {
             graphics.FillRectangle(brush, band);
         }
-        graphics.FillRectangle(SystemBrushes.Highlight, band.Left, band.Top, _accentWidth, band.Height);
+        using (var accent = new SolidBrush(Palette.Accent)) {
+            graphics.FillRectangle(accent, band.Left, band.Top, _accentWidth, band.Height);
+        }
 
         var arrow = LogicalToDeviceUnits(4);
         var center = new Point(band.Left + _padding + _dotSize / 2, band.Top + band.Height / 2);

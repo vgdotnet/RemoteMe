@@ -52,7 +52,7 @@ windows. COM lives only in the RDP wrapper. Cryptography and file access live on
    next revision, write to a temporary file, atomic replace of the main file. Connection passwords are
    kept in memory as `ProtectedSecret` (encrypted with a per-process key) and go into and out of the
    JSON without plain-text strings; plain-text buffers are zeroed.
-3. **Connect.** A click in the list makes the session manager create a session and take the address,
+3. **Connect.** A double click in the list (or the "Connect" button of the session area) makes the session manager create a session and take the address,
    user name and password from the model (a connection without a saved password asks for it first).
    The session talks to the component through `IRdpClient` (Core): `RdpConnectRequest.For` turns the
    connection into what the component gets (for a Hyper-V VM: the host, the VM ID and the session kind,

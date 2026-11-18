@@ -10,6 +10,8 @@ internal static class NativeMethods {
     public const int WmKeyUp = 0x0101;
     public const int WmSysKeyDown = 0x0104;
     public const int WmSysKeyUp = 0x0105;
+    public const int WmSettingChange = 0x001A;
+    public const int WmDwmColorizationColorChanged = 0x0320;
 
     public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 

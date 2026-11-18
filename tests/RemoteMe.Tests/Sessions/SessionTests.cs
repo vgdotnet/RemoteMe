@@ -61,18 +61,16 @@ public sealed class SessionTests {
         Assert.Equal(1, _client.DisconnectCalls);
         Assert.Equal(SessionState.Disconnected, session.State);
         Assert.Equal("Disconnected.", session.Message);
-        Assert.True(session.DisconnectedByUser);
     }
 
     [Fact]
-    public void Connect_AfterTheUsersDisconnect_ForgetsIt() {
+    public void Connect_AfterTheUsersDisconnect_ConnectsAgain() {
         var session = Connected();
         session.Disconnect();
         _client.RaiseDisconnected(0x1);
 
         session.Connect(_connection);
 
-        Assert.False(session.DisconnectedByUser);
         Assert.Equal(SessionState.Connecting, session.State);
     }
 
@@ -84,7 +82,6 @@ public sealed class SessionTests {
 
         Assert.Equal(SessionState.Disconnected, session.State);
         Assert.Equal("The remote computer is restarting.", session.Message);
-        Assert.False(session.DisconnectedByUser);
     }
 
     [Fact]

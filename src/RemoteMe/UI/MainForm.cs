@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using RemoteMe.Core.Logging;
 using RemoteMe.Core.Model;
 using RemoteMe.Core.Sessions;
@@ -139,6 +140,7 @@ internal sealed class MainForm : Form {
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
         moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
         _listStrip.Click += (_, _) => ToggleList();
+        _list.ConnectionSelected += (_, e) => ShowConnection(e.Connection);
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
         _list.MenuRequested += (_, e) => ShowConnectionMenu(e.Connection.Id, e.ScreenLocation);
         _list.DeleteRequested += (_, e) => {
@@ -187,7 +189,21 @@ internal sealed class MainForm : Form {
     // The Palette colors are fixed values, so they are mixed again when Windows changes its colors.
     protected override void OnSystemColorsChanged(EventArgs e) {
         base.OnSystemColorsChanged(e);
+        Palette.ResetAccent();
         ApplyPalette();
+        _list.Invalidate();
+    }
+
+    // A new accent color in the Windows settings comes as a colorization change and as an
+    // "ImmersiveColorSet" setting change.
+    protected override void WndProc(ref Message m) {
+        if (m.Msg == NativeMethods.WmDwmColorizationColorChanged
+            || (m.Msg == NativeMethods.WmSettingChange && m.LParam != IntPtr.Zero
+                && Marshal.PtrToStringUni(m.LParam) == "ImmersiveColorSet")) {
+            Palette.ResetAccent();
+            _list.Invalidate();
+        }
+        base.WndProc(ref m);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e) {
@@ -324,17 +340,20 @@ internal sealed class MainForm : Form {
         }
     }
 
-    // Clicking a row shows its session: a session in another window is brought forward, and a
-    // connection without a running session connects.
-    // A click on a disconnected row connects, except after the user's own Disconnect: then it only shows
-    // the session area with its "Connect" button (decided on 2026-11-17).
-    private void OpenConnection(Connection connection) {
+    // A click on a row shows its session, and a session in another window is brought forward. A connection
+    // without a running session only shows the session area with its "Connect" button; a double click
+    // connects it (decided on 2026-11-18).
+    private void ShowConnection(Connection connection) {
         _list.ActiveConnectionId = connection.Id;
         RefreshViews();
-        var session = _sessions.Find(connection.Id);
         if (IsAway(connection.Id)) {
             ShowAway(connection.Id);
-        } else if (session is null || !(session.IsActive || session.DisconnectedByUser)) {
+        }
+    }
+
+    private void OpenConnection(Connection connection) {
+        ShowConnection(connection);
+        if (!IsAway(connection.Id) && _sessions.Find(connection.Id)?.IsActive != true) {
             Connect(connection, this);
         }
     }

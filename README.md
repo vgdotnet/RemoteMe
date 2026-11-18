@@ -33,8 +33,8 @@ and the interface contains only the connection list and the session itself.
    is moved between machines by copying. The key is derived from the password with PBKDF2 (many
    iterations, random salt), encryption is AES-256-GCM (a wrong password and a damaged file are detected
    immediately).
-5. **Connection passwords are stored in the file.** Connecting takes one click, the Windows credentials
-   dialog does not appear. When a connection has no saved password, RemoteMe asks for it in its own
+5. **Connection passwords are stored in the file.** Connecting does not stop at the Windows
+   credentials dialog. When a connection has no saved password, RemoteMe asks for it in its own
    window before connecting and offers to save it (decided on 2026-11-13). The exception is a Hyper-V
    VM in an enhanced session: its own password is asked in a Windows dialog (see requirement 14).
 6. **Platform - modern .NET.** .NET 10 (SDK 10.0.404), WinForms, `net10.0-windows`.
@@ -98,9 +98,9 @@ Decisions made on 2026-11-12 and 2026-11-13.
   redirection settings are grayed out (decided on 2026-11-17).
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
   with a collapse arrow; while there are no groups, a flat list). The caption is a band tinted with
-  the Windows selection color (not the accent color of the Windows settings), with a bar of that
+  the accent color of the Windows settings (the selection color in high contrast), with a bar of that
   color on the left and the number of its connections on the right, and a gap above it (decided on
-  2026-11-17). Two lines per connection: the name, and
+  2026-11-17; the accent color on 2026-11-18). A new accent color in the Windows settings repaints it. Two lines per connection: the name, and
   below it the user name and address in gray. Status dot: green - connected, yellow - connecting or
   reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
@@ -129,9 +129,11 @@ Decisions made on 2026-11-12 and 2026-11-13.
   application since it was read (copied from another machine), saving asks whether to read the file
   again (the change just made is lost) or overwrite it (decided on 2026-11-13). The file is not
   watched.
-- **No tabs.** The list replaces them: clicking a connected row switches to its session, clicking a
-  disconnected row connects. After the user's own Disconnect (or a cancelled connect), a click only
-  shows the session area with "Disconnected." and a "Connect" button (decided on 2026-11-17).
+- **No tabs.** The list replaces them: a click on a row switches to its session (a session in a
+  separate window or in full screen is brought forward). A row without a running session is only
+  selected: the session area shows its state ("Not connected.", "Disconnected." or the reason) with a
+  "Connect" or "Reconnect" button. A double click or Enter on the row connects it (decided on
+  2026-11-18).
 - **No bottom notification bar.** The disconnect reason and the connection progress are shown in the
   session area (with a "Reconnect" button). Settings file errors are shown in a message box. A log of
   all messages is kept in memory and opens in a separate window on demand; it is not written to disk.

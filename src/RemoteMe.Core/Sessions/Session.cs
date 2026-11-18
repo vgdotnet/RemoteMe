@@ -42,16 +42,12 @@ public sealed class Session : IDisposable {
 
     public bool IsActive => State is SessionState.Connecting or SessionState.Connected or SessionState.Reconnecting;
 
-    // Ended by the user's own Disconnect (or a cancelled connect), not by the remote side or an error.
-    public bool DisconnectedByUser { get; private set; }
-
     public void Connect(Connection connection) {
         if (IsActive) {
             return;
         }
         Connection = connection;
         _disconnectRequested = false;
-        DisconnectedByUser = false;
         var target = DescribeTarget(connection);
         SetState(SessionState.Connecting, $"Connecting to {target}...");
         _log.Information(connection.Name, $"Connecting to {target}.");
@@ -103,7 +99,6 @@ public sealed class Session : IDisposable {
         var codes = $"reason 0x{e.Reason:X}, extended {e.ExtendedReason}";
         if (_disconnectRequested) {
             _disconnectRequested = false;
-            DisconnectedByUser = true;
             SetState(SessionState.Disconnected, "Disconnected.");
             _log.Information(Connection.Name, $"Disconnected ({codes}).");
             return;

@@ -114,15 +114,25 @@ Decisions made on 2026-11-12 and 2026-11-13.
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
   line and the buttons: the date, under it the time of the chosen time zone in large digits, without
   seconds, and under that the zone's main city with its UTC offset, "Yekaterinburg · UTC+5" (this order
-  decided on 2026-11-19, option 3 of six mockups); the gaps between the lines are even. The list gets
-  as narrow as these lines allow and no narrower, so the city and its offset stay whole (decided on
-  2026-11-19). The city comes from the zone's IANA
+  decided on 2026-11-19, option 3 of six mockups); the gaps between the lines are even. The full list
+  gets as narrow as these lines allow, so the city and its offset stay whole; narrower than that is
+  only the compact strip (decided on 2026-11-19). The city comes from the zone's IANA
   name, since Windows names a zone by several cities: "Brussels, Copenhagen, Madrid, Paris" shows
   Paris. A left click on the clock, or "Clock time zone..." in the "..." menu, opens a window with the
   Windows time zones and a search box that finds a city or a UTC offset (+7, -3:30), the offset of
   now or the standard one; the first line is the local time of Windows, the default, and it is found
   the same way. The zone is kept in the settings file; a file without it
   shows the local time.
+- **Compact strip** (decided on 2026-11-19). The list dragged narrower than the clock snaps, when let
+  go, to a strip 44 pixels wide or back to the clock's width, whichever is nearer. In the strip every
+  connection without a group and of an open group is a circle, those of collapsed groups are not
+  shown, and a thin line sets the groups apart instead of their captions. The circle has the color of
+  the state (green - connected, yellow - connecting or reconnecting, red - error, gray - not
+  connected) and two letters: the first two of a one-word name, or the first letters of the first two
+  words; spaces, underscores and hyphens part the words (HOST - HO, Legal Data Space - LD, PRO_AGENT -
+  PA). A ring marks the session on screen, and the tooltip gives the full name. Clicks, keys and the
+  right-click menu work as in the list; there is no dragging. The clock is hidden and the buttons stand
+  one under another. When the circles do not fit in the height, the strip gets wider by the scroll bar.
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first

@@ -26,6 +26,26 @@ public static class ConnectionListLayout {
         return rows;
     }
 
+    // The compact view: the connections without a group and those of the open groups, in list order, and
+    // the index of each one that starts another group, to set the groups apart.
+    public static (IReadOnlyList<ListRow> Rows, IReadOnlySet<int> SectionStarts) BuildCompact(Settings settings, IReadOnlySet<string> collapsedGroups) {
+        var rows = new List<ListRow>();
+        var starts = new HashSet<int>();
+        var newSection = false;
+        foreach (var row in Build(settings, collapsedGroups)) {
+            if (row is GroupRow) {
+                newSection = rows.Count > 0;
+                continue;
+            }
+            if (newSection) {
+                starts.Add(rows.Count);
+                newSection = false;
+            }
+            rows.Add(row);
+        }
+        return (rows, starts);
+    }
+
     // The connections in list order, collapsed groups included.
     public static IReadOnlyList<Guid> ConnectionOrder(Settings settings) => Build(settings, new HashSet<string>())
         .OfType<ConnectionRow>()

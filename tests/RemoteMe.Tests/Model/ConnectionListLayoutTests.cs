@@ -39,6 +39,32 @@ public sealed class ConnectionListLayoutTests {
         Assert.Equal(new GroupRow("Lab", 2, true), rows[^1]);
     }
 
+    [Fact]
+    public void BuildCompact_KeepsTheConnectionsAndMarksWhereEachGroupStarts() {
+        var (rows, starts) = ConnectionListLayout.BuildCompact(Sample, new HashSet<string>());
+
+        Assert.Equal(["Alpha", "Delta", "Beta", "Gamma"], Describe(rows));
+        Assert.Equal([1, 2], starts.Order());
+    }
+
+    [Fact]
+    public void BuildCompact_LeavesOutCollapsedGroups() {
+        var (rows, starts) = ConnectionListLayout.BuildCompact(Sample, new HashSet<string> { "Office" });
+
+        Assert.Equal(["Alpha", "Beta", "Gamma"], Describe(rows));
+        Assert.Equal([1], starts);
+    }
+
+    [Fact]
+    public void BuildCompact_DoesNotMarkTheFirstGroupWhenNothingIsAboveIt() {
+        var settings = SettingsEditor.Normalize(new Settings { Connections = [Beta, Delta] });
+
+        var (rows, starts) = ConnectionListLayout.BuildCompact(settings, new HashSet<string>());
+
+        Assert.Equal(["Beta", "Delta"], Describe(rows));
+        Assert.Equal([1], starts);
+    }
+
     [Theory]
     [InlineData(4, true, "Lab", "Beta", false)]
     [InlineData(4, false, "Lab", "Gamma", false)]

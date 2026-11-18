@@ -6,7 +6,8 @@ using RemoteMe.Core.Model;
 namespace RemoteMe.UI;
 
 // The owner-drawn connection list: group captions with a collapse arrow, two-line connection rows
-// with a status dot, a menu button on hover, and reordering by dragging.
+// with a status dot, a menu button on hover, and reordering by dragging. In the compact view, a narrow
+// strip, each connection of the open groups is a circle with its initials in the color of its state.
 [DesignerCategory("Code")]
 internal sealed class ConnectionList : ScrollableControl {
     private const TextFormatFlags TextFlags = TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix
@@ -17,8 +18,11 @@ internal sealed class ConnectionList : ScrollableControl {
     private static readonly Color ErrorColor = Color.FromArgb(0xD1, 0x34, 0x38);
 
     private readonly HashSet<string> _collapsedGroups = new(StringComparer.Ordinal);
+    private readonly ToolTip _toolTip = new();
     private Settings _settings = new();
+    private bool _compact;
     private IReadOnlyList<ListRow> _rows = [];
+    private HashSet<int> _sectionStarts = [];
     private int[] _rowTops = [];
     private int _contentHeight;
     private Guid? _activeConnectionId;
@@ -42,6 +46,10 @@ internal sealed class ConnectionList : ScrollableControl {
     private int _rowInset;
     private int _cornerRadius;
     private int _accentWidth;
+    private int _compactWidth;
+    private int _circleSize;
+    private int _circleRowHeight;
+    private int _sectionGap;
 
     public ConnectionList() {
         SetStyle(
@@ -85,6 +93,27 @@ internal sealed class ConnectionList : ScrollableControl {
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Func<Guid, ConnectionStatus> StatusOf { get; set; } = _ => ConnectionStatus.NotConnected;
 
+    // The circles of the open groups instead of the rows (decided on 2026-11-19).
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Compact {
+        get => _compact;
+        set {
+            if (_compact != value) {
+                _compact = value;
+                CancelDrag();
+                Rebuild();
+            }
+        }
+    }
+
+    // The width of the strip the compact view is drawn for; a scroll bar, when the circles do not fit in
+    // the height, comes beside them and makes the strip wider.
+    [Browsable(false)]
+    public int CompactWidth { get; private set; }
+
+    public event EventHandler? CompactWidthChanged;
+
     public void ShowSettings(Settings settings) {
         _settings = settings;
         _collapsedGroups.Clear();
@@ -95,6 +124,7 @@ internal sealed class ConnectionList : ScrollableControl {
     protected override void Dispose(bool disposing) {
         if (disposing) {
             _boldFont?.Dispose();
+            _toolTip.Dispose();
         }
         base.Dispose(disposing);
     }
@@ -120,8 +150,10 @@ internal sealed class ConnectionList : ScrollableControl {
     protected override void OnPaint(PaintEventArgs e) {
         var graphics = e.Graphics;
         if (_rows.Count == 0) {
-            TextRenderer.DrawText(graphics, "No connections yet", Font, ClientRectangle, SystemColors.GrayText,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+            if (!_compact) {
+                TextRenderer.DrawText(graphics, "No connections yet", Font, ClientRectangle, SystemColors.GrayText,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+            }
             return;
         }
         for (var i = 0; i < _rows.Count; i++) {
@@ -133,6 +165,9 @@ internal sealed class ConnectionList : ScrollableControl {
                 case GroupRow group:
                     PaintGroup(graphics, group, bounds, i);
                     break;
+                case ConnectionRow row when _compact:
+                    PaintCircle(graphics, row.Connection, bounds, i);
+                    break;
                 case ConnectionRow row:
                     PaintConnection(graphics, row.Connection, bounds, i);
                     break;
@@ -141,6 +176,11 @@ internal sealed class ConnectionList : ScrollableControl {
         if (_dragging && _dropIndex >= 0) {
             PaintDropLine(graphics);
         }
+    }
+
+    protected override void OnClientSizeChanged(EventArgs e) {
+        base.OnClientSizeChanged(e);
+        UpdateCompactWidth();
     }
 
     protected override void OnScroll(ScrollEventArgs se) {
@@ -173,7 +213,7 @@ internal sealed class ConnectionList : ScrollableControl {
 
     protected override void OnMouseMove(MouseEventArgs e) {
         base.OnMouseMove(e);
-        if (_pressIndex >= 0 && e.Button == MouseButtons.Left) {
+        if (_pressIndex >= 0 && e.Button == MouseButtons.Left && !_compact) {
             if (!_dragging && HasLeftDragArea(e.Location)) {
                 _dragging = true;
                 _hoverIndex = -1;
@@ -204,7 +244,7 @@ internal sealed class ConnectionList : ScrollableControl {
             case GroupRow group:
                 ToggleGroup(group.Name);
                 break;
-            case ConnectionRow row when MenuButtonBounds(RowBounds(pressed)) is var button && button.Contains(e.Location):
+            case ConnectionRow row when !_compact && MenuButtonBounds(RowBounds(pressed)) is var button && button.Contains(e.Location):
                 MenuRequested?.Invoke(this, new ConnectionMenuEventArgs(row.Connection, PointToScreen(new Point(button.Left, button.Bottom))));
                 break;
             case ConnectionRow row:
@@ -306,12 +346,24 @@ internal sealed class ConnectionList : ScrollableControl {
         _rowInset = LogicalToDeviceUnits(4);
         _cornerRadius = LogicalToDeviceUnits(4);
         _accentWidth = LogicalToDeviceUnits(3);
+        _compactWidth = LogicalToDeviceUnits(44);
+        _circleSize = LogicalToDeviceUnits(30);
+        _circleRowHeight = LogicalToDeviceUnits(40);
+        _sectionGap = LogicalToDeviceUnits(9);
+        UpdateCompactWidth();
     }
 
     private void Rebuild() {
         var previousFocus = _focusIndex;
         var focusedKey = _focusIndex >= 0 && _focusIndex < _rows.Count ? KeyOf(_rows[_focusIndex]) : null;
-        _rows = ConnectionListLayout.Build(_settings, _collapsedGroups);
+        if (_compact) {
+            var (rows, sectionStarts) = ConnectionListLayout.BuildCompact(_settings, _collapsedGroups);
+            _rows = rows;
+            _sectionStarts = sectionStarts.ToHashSet();
+        } else {
+            _rows = ConnectionListLayout.Build(_settings, _collapsedGroups);
+            _sectionStarts = [];
+        }
         _rowTops = new int[_rows.Count];
         var top = 0;
         for (var i = 0; i < _rows.Count; i++) {
@@ -320,10 +372,20 @@ internal sealed class ConnectionList : ScrollableControl {
         }
         _contentHeight = top;
         AutoScrollMinSize = new Size(0, top);
+        UpdateCompactWidth();
         var found = focusedKey is null ? -1 : _rows.ToList().FindIndex(row => KeyOf(row) == focusedKey);
         _focusIndex = found >= 0 ? found : Math.Min(previousFocus, _rows.Count - 1);
         _hoverIndex = -1;
         Invalidate();
+    }
+
+    private void UpdateCompactWidth() {
+        var scrolls = _compact && _contentHeight > ClientSize.Height;
+        var width = _compactWidth + (scrolls ? SystemInformation.GetVerticalScrollBarWidthForDpi(DeviceDpi) : 0);
+        if (width != CompactWidth) {
+            CompactWidth = width;
+            CompactWidthChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     // The group folds at once, painted before the settings file is written.
@@ -410,12 +472,24 @@ internal sealed class ConnectionList : ScrollableControl {
         if (index >= _rows.Count) {
             index = -1;
         }
-        var onButton = index >= 0 && _rows[index] is ConnectionRow && MenuButtonBounds(RowBounds(index)).Contains(location);
+        var onButton = !_compact && index >= 0 && _rows[index] is ConnectionRow && MenuButtonBounds(RowBounds(index)).Contains(location);
         if (index != _hoverIndex || onButton != _hoverOnMenuButton) {
+            if (index != _hoverIndex) {
+                ShowCircleTip(index);
+            }
             _hoverIndex = index;
             _hoverOnMenuButton = onButton;
             Invalidate();
         }
+    }
+
+    // A circle shows only initials, so the full name comes as a tooltip. Turning the tooltip off and on
+    // makes it come again for the next circle, which is still the same control.
+    private void ShowCircleTip(int index) {
+        var text = _compact && index >= 0 && _rows[index] is ConnectionRow row ? row.Connection.Name : null;
+        _toolTip.Active = false;
+        _toolTip.SetToolTip(this, text);
+        _toolTip.Active = text is not null;
     }
 
     // Returns the row under the client Y coordinate, or the row count for the space below the last row.
@@ -432,7 +506,9 @@ internal sealed class ConnectionList : ScrollableControl {
     private bool IsUpperHalf(int index, int clientY) =>
         index < _rows.Count && clientY - AutoScrollPosition.Y < _rowTops[index] + RowHeight(index) / 2;
 
-    private int RowHeight(int index) => _rows[index] is GroupRow ? _groupBandHeight : _connectionRowHeight;
+    private int RowHeight(int index) => _compact
+        ? (_sectionStarts.Contains(index) ? _sectionGap : 0) + _circleRowHeight
+        : _rows[index] is GroupRow ? _groupBandHeight : _connectionRowHeight;
 
     private Rectangle RowBounds(int index) =>
         new(0, _rowTops[index] + AutoScrollPosition.Y, ClientSize.Width, RowHeight(index));
@@ -471,6 +547,44 @@ internal sealed class ConnectionList : ScrollableControl {
         }
         if (Focused && index == _focusIndex) {
             ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(plate, -1, -1), foreground, active ? SystemColors.Highlight : BackColor);
+        }
+    }
+
+    // A circle in the color of the state with the initials of the name; a line above the first circle of
+    // each further group, a plate on hover and a ring around the session on screen.
+    private void PaintCircle(Graphics graphics, Connection connection, Rectangle bounds, int index) {
+        var cell = bounds;
+        if (_sectionStarts.Contains(index)) {
+            var lineY = bounds.Top + _sectionGap / 2;
+            using (var pen = new Pen(Palette.Separator)) {
+                graphics.DrawLine(pen, bounds.Left + _rowInset * 2, lineY, bounds.Right - _rowInset * 2 - 1, lineY);
+            }
+            cell = Rectangle.FromLTRB(bounds.Left, bounds.Top + _sectionGap, bounds.Right, bounds.Bottom);
+        }
+        if (index == _hoverIndex) {
+            FillRounded(graphics, Palette.Hover, Rectangle.Inflate(cell, -_rowInset / 2, -_rowInset / 2), _cornerRadius);
+        }
+        var circle = new Rectangle(cell.Left + (cell.Width - _circleSize) / 2, cell.Top + (cell.Height - _circleSize) / 2, _circleSize, _circleSize);
+        var (fill, text) = StatusOf(connection.Id) switch {
+            ConnectionStatus.Connected => (ConnectedColor, Color.White),
+            ConnectionStatus.Busy => (BusyColor, Color.Black),
+            ConnectionStatus.Error => (ErrorColor, Color.White),
+            _ => (Palette.Blend(SystemColors.Window, SystemColors.GrayText, 0.3), SystemColors.ControlText),
+        };
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using (var brush = new SolidBrush(fill)) {
+            graphics.FillEllipse(brush, circle);
+        }
+        if (connection.Id == _activeConnectionId) {
+            using var ring = new Pen(SystemColors.Highlight, LogicalToDeviceUnits(2));
+            var gap = LogicalToDeviceUnits(3);
+            graphics.DrawEllipse(ring, Rectangle.Inflate(circle, gap, gap));
+        }
+        graphics.SmoothingMode = SmoothingMode.Default;
+        TextRenderer.DrawText(graphics, ConnectionInitials.Of(connection.Name), _boldFont ?? Font, circle, text,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+        if (Focused && index == _focusIndex) {
+            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(cell, -1, -1));
         }
     }
 

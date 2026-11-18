@@ -28,6 +28,9 @@ internal sealed class MainForm : Form {
     private readonly ToolTip _toolTip = new();
     private readonly Font _stripFont;
     private readonly Button _fullScreenButton;
+    private readonly Button _addButton;
+    private readonly Button _moreButton;
+    private readonly TableLayoutPanel _bottomBar;
     private readonly List<Button> _iconButtons = [];
     private readonly Panel _bottomLine;
     private readonly Font _glyphFont;
@@ -65,11 +68,11 @@ internal sealed class MainForm : Form {
 
         _list = new ConnectionList { Dock = DockStyle.Fill };
         _glyphFont = new Font("Segoe MDL2 Assets", 11f);
-        var addButton = CreateIconButton(AddGlyph, "Add connection");
+        _addButton = CreateIconButton(AddGlyph, "Add connection");
         _fullScreenButton = CreateIconButton(FullScreenGlyph, "");
         ShowMainFullScreenState();
-        var moreButton = CreateIconButton(MoreGlyph, "More commands");
-        var bottomBar = new TableLayoutPanel {
+        _moreButton = CreateIconButton(MoreGlyph, "More commands");
+        _bottomBar = new TableLayoutPanel {
             Dock = DockStyle.Bottom,
             AutoSize = true,
             ColumnCount = 4,
@@ -77,13 +80,13 @@ internal sealed class MainForm : Form {
             Padding = new Padding(6, 4, 6, 6),
             BackColor = SystemColors.Window,
         };
-        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        bottomBar.Controls.Add(addButton, 0, 0);
-        bottomBar.Controls.Add(_fullScreenButton, 2, 0);
-        bottomBar.Controls.Add(moreButton, 3, 0);
+        _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _bottomBar.Controls.Add(_addButton, 0, 0);
+        _bottomBar.Controls.Add(_fullScreenButton, 2, 0);
+        _bottomBar.Controls.Add(_moreButton, 3, 0);
         _bottomLine = new Panel { Dock = DockStyle.Bottom, Height = 1 };
         ApplyPalette();
         _clock = new ClockPanel { Dock = DockStyle.Bottom };
@@ -93,7 +96,7 @@ internal sealed class MainForm : Form {
         _split.Panel1.Controls.Add(_list);
         _split.Panel1.Controls.Add(_bottomLine);
         _split.Panel1.Controls.Add(_clock);
-        _split.Panel1.Controls.Add(bottomBar);
+        _split.Panel1.Controls.Add(_bottomBar);
         _split.Panel2.Controls.Add(_mainView);
         _listStrip = new Button {
             Dock = DockStyle.Left,
@@ -135,10 +138,16 @@ internal sealed class MainForm : Form {
 
         _sessions.SessionChanged += (_, id) => OnSessionChanged(id);
         _list.StatusOf = StatusOf;
-        addButton.Click += (_, _) => AddConnection();
+        _addButton.Click += (_, _) => AddConnection();
         _clock.Click += (_, _) => ChooseClockTimeZone();
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
-        moreButton.Click += (_, _) => _moreMenu.Show(moreButton, new Point(moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
+        _moreButton.Click += (_, _) => {
+            if (_list.Compact) {
+                _moreMenu.Show(_moreButton, new Point(_moreButton.Width, _moreButton.Height), ToolStripDropDownDirection.AboveRight);
+            } else {
+                _moreMenu.Show(_moreButton, new Point(_moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
+            }
+        };
         _listStrip.Click += (_, _) => ToggleList();
         _list.ConnectionSelected += (_, e) => ShowConnection(e.Connection);
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
@@ -162,9 +171,11 @@ internal sealed class MainForm : Form {
         var area = Screen.FromControl(this).WorkingArea;
         Size = new Size(Math.Min(Width, area.Width * 4 / 5), Math.Min(Height, area.Height * 4 / 5));
         CenterToScreen();
+        _split.SplitterDistance = LogicalToDeviceUnits(300);
         ApplyListMinimum();
         _clock.MinimumWidthChanged += (_, _) => ApplyListMinimum();
-        _split.SplitterDistance = LogicalToDeviceUnits(300);
+        _split.SplitterMoved += (_, _) => SnapList();
+        _list.CompactWidthChanged += (_, _) => ApplyListMinimum();
         _hotkeys = new HotkeyHook(OnHotkey);
         _list.Focus();
     }
@@ -536,14 +547,62 @@ internal sealed class MainForm : Form {
         _listStrip.Visible = _split.Panel1Collapsed;
     }
 
-    // The list gets as narrow as the clock lets it, so the city and its UTC offset stay whole (decided on
-    // 2026-11-19, instead of a fixed 200 pixels).
+    // The full list gets as narrow as the clock lets it, so the city and its UTC offset stay whole; below
+    // that only the compact strip of circles is left (both decided on 2026-11-19).
     private void ApplyListMinimum() {
-        _split.Panel1MinSize = _clock.MinimumWidth;
-        if (_split.SplitterDistance < _clock.MinimumWidth) {
-            _split.SplitterDistance = _clock.MinimumWidth;
-        }
+        _split.Panel1MinSize = _list.CompactWidth;
+        SnapList();
     }
+
+    // A list dragged narrower than the clock goes to the compact strip or back to the clock's width,
+    // whichever is nearer.
+    private void SnapList() {
+        var full = _clock.MinimumWidth;
+        var compact = _list.CompactWidth;
+        var width = _split.SplitterDistance;
+        if (width < full) {
+            var snapped = width - compact < full - width ? compact : full;
+            if (snapped != width) {
+                _split.SplitterDistance = snapped;
+            }
+        }
+        SetCompactList(_split.SplitterDistance < full);
+    }
+
+    // The compact strip has no room for the clock, and its buttons stand one under another.
+    private void SetCompactList(bool compact) {
+        if (_list.Compact == compact) {
+            return;
+        }
+        _list.Compact = compact;
+        _clock.Visible = !compact;
+        _bottomBar.SuspendLayout();
+        if (compact) {
+            _bottomBar.SetCellPosition(_addButton, new TableLayoutPanelCellPosition(0, 0));
+            _bottomBar.SetCellPosition(_fullScreenButton, new TableLayoutPanelCellPosition(0, 1));
+            _bottomBar.SetCellPosition(_moreButton, new TableLayoutPanelCellPosition(0, 2));
+            _bottomBar.ColumnCount = 1;
+            _bottomBar.RowCount = 3;
+            _bottomBar.ColumnStyles[0] = new ColumnStyle(SizeType.Percent, 100);
+            _bottomBar.Padding = Scaled(0, 4, 0, 4);
+        } else {
+            _bottomBar.ColumnCount = 4;
+            _bottomBar.RowCount = 1;
+            _bottomBar.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
+            _bottomBar.SetCellPosition(_addButton, new TableLayoutPanelCellPosition(0, 0));
+            _bottomBar.SetCellPosition(_fullScreenButton, new TableLayoutPanelCellPosition(2, 0));
+            _bottomBar.SetCellPosition(_moreButton, new TableLayoutPanelCellPosition(3, 0));
+            _bottomBar.Padding = Scaled(6, 4, 6, 6);
+        }
+        foreach (var button in new[] { _addButton, _fullScreenButton, _moreButton }) {
+            button.Anchor = compact ? AnchorStyles.Top : AnchorStyles.Top | AnchorStyles.Left;
+            button.Margin = compact ? Scaled(0, 2, 0, 2) : Scaled(2, 0, 2, 0);
+        }
+        _bottomBar.ResumeLayout(true);
+    }
+
+    private Padding Scaled(int left, int top, int right, int bottom) =>
+        new(LogicalToDeviceUnits(left), LogicalToDeviceUnits(top), LogicalToDeviceUnits(right), LogicalToDeviceUnits(bottom));
 
     // The main window covers its monitor, taskbar included, with no title bar; the list stays. Only the
     // border style changes, so the window and its session controls are kept.

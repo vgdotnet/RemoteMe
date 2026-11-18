@@ -31,10 +31,10 @@ internal sealed class ConnectionList : ScrollableControl {
     private bool _dragging;
     private int _dropIndex = -1;
     private bool _dropUpperHalf;
-    private Font? _captionFont;
+    private Font? _boldFont;
     private int _lineHeight;
     private int _connectionRowHeight;
-    private int _groupRowHeight;
+    private int _groupBandHeight;
     private int _padding;
     private int _dotSize;
     private int _textLeft;
@@ -91,7 +91,7 @@ internal sealed class ConnectionList : ScrollableControl {
 
     protected override void Dispose(bool disposing) {
         if (disposing) {
-            _captionFont?.Dispose();
+            _boldFont?.Dispose();
         }
         base.Dispose(disposing);
     }
@@ -291,13 +291,13 @@ internal sealed class ConnectionList : ScrollableControl {
     }
 
     private void UpdateMetrics() {
-        _captionFont?.Dispose();
-        _captionFont = new Font(Font, FontStyle.Bold);
+        _boldFont?.Dispose();
+        _boldFont = new Font(Font, FontStyle.Bold);
         _lineHeight = TextRenderer.MeasureText("Ag", Font, Size.Empty, TextFormatFlags.NoPadding).Height;
         _padding = LogicalToDeviceUnits(10);
         _connectionRowHeight = _lineHeight * 2 + LogicalToDeviceUnits(16);
         _groupGap = LogicalToDeviceUnits(6);
-        _groupRowHeight = _groupGap + _lineHeight + LogicalToDeviceUnits(14);
+        _groupBandHeight = _lineHeight + LogicalToDeviceUnits(14);
         _dotSize = LogicalToDeviceUnits(10);
         _textLeft = _padding * 2 + _dotSize;
         _menuButtonSize = LogicalToDeviceUnits(26);
@@ -314,7 +314,7 @@ internal sealed class ConnectionList : ScrollableControl {
         var top = 0;
         for (var i = 0; i < _rows.Count; i++) {
             _rowTops[i] = top;
-            top += RowHeight(_rows[i]);
+            top += RowHeight(i);
         }
         _contentHeight = top;
         AutoScrollMinSize = new Size(0, top);
@@ -342,7 +342,7 @@ internal sealed class ConnectionList : ScrollableControl {
             return;
         }
         var top = _rowTops[index];
-        var bottom = top + RowHeight(_rows[index]);
+        var bottom = top + RowHeight(index);
         var viewTop = -AutoScrollPosition.Y;
         if (top < viewTop) {
             AutoScrollPosition = new Point(0, top);
@@ -416,7 +416,7 @@ internal sealed class ConnectionList : ScrollableControl {
     private int IndexAt(int clientY) {
         var y = clientY - AutoScrollPosition.Y;
         for (var i = 0; i < _rows.Count; i++) {
-            if (y < _rowTops[i] + RowHeight(_rows[i])) {
+            if (y < _rowTops[i] + RowHeight(i)) {
                 return i;
             }
         }
@@ -424,12 +424,15 @@ internal sealed class ConnectionList : ScrollableControl {
     }
 
     private bool IsUpperHalf(int index, int clientY) =>
-        index < _rows.Count && clientY - AutoScrollPosition.Y < _rowTops[index] + RowHeight(_rows[index]) / 2;
+        index < _rows.Count && clientY - AutoScrollPosition.Y < _rowTops[index] + RowHeight(index) / 2;
 
-    private int RowHeight(ListRow row) => row is GroupRow ? _groupRowHeight : _connectionRowHeight;
+    private int RowHeight(int index) => _rows[index] is GroupRow ? GapAbove(index) + _groupBandHeight : _connectionRowHeight;
+
+    // The gap above a group caption sets it apart from the rows above it, so the first row has none.
+    private int GapAbove(int index) => index > 0 && _rows[index] is GroupRow ? _groupGap : 0;
 
     private Rectangle RowBounds(int index) =>
-        new(0, _rowTops[index] + AutoScrollPosition.Y, ClientSize.Width, RowHeight(_rows[index]));
+        new(0, _rowTops[index] + AutoScrollPosition.Y, ClientSize.Width, RowHeight(index));
 
     private Rectangle MenuButtonBounds(Rectangle row) => new(
         row.Right - _padding / 2 - _menuButtonSize,
@@ -455,7 +458,7 @@ internal sealed class ConnectionList : ScrollableControl {
         var textRight = hover ? MenuButtonBounds(bounds).Left - _padding / 2 : bounds.Right - _padding;
         var textTop = bounds.Top + (bounds.Height - _lineHeight * 2) / 2;
         var nameBounds = new Rectangle(bounds.Left + _textLeft, textTop, textRight - bounds.Left - _textLeft, _lineHeight);
-        TextRenderer.DrawText(graphics, connection.Name, Font, nameBounds, foreground, TextFlags);
+        TextRenderer.DrawText(graphics, connection.Name, _boldFont ?? Font, nameBounds, foreground, TextFlags);
         TextRenderer.DrawText(graphics, Details(connection), Font, nameBounds with { Y = nameBounds.Bottom }, secondary, TextFlags);
 
         if (hover) {
@@ -469,7 +472,7 @@ internal sealed class ConnectionList : ScrollableControl {
     // A group caption is a tinted band with an accent bar on the left and the number of its connections
     // on the right; the gap above the band sets the groups apart.
     private void PaintGroup(Graphics graphics, GroupRow group, Rectangle bounds, int index) {
-        var band = Rectangle.FromLTRB(bounds.Left, bounds.Top + _groupGap, bounds.Right, bounds.Bottom);
+        var band = Rectangle.FromLTRB(bounds.Left, bounds.Top + GapAbove(index), bounds.Right, bounds.Bottom);
         using (var brush = new SolidBrush(index == _hoverIndex && !_dragging ? Palette.GroupBandHover : Palette.GroupBand)) {
             graphics.FillRectangle(brush, band);
         }
@@ -495,7 +498,7 @@ internal sealed class ConnectionList : ScrollableControl {
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
 
         var textBounds = Rectangle.FromLTRB(band.Left + _textLeft, band.Top, pill.Left - _padding / 2, band.Bottom);
-        TextRenderer.DrawText(graphics, group.Name, _captionFont ?? Font, textBounds, SystemColors.ControlText, TextFlags);
+        TextRenderer.DrawText(graphics, group.Name, _boldFont ?? Font, textBounds, SystemColors.ControlText, TextFlags);
 
         if (Focused && index == _focusIndex) {
             ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(band, -1, -1));
@@ -563,7 +566,7 @@ internal sealed class ConnectionList : ScrollableControl {
     private void PaintDropLine(Graphics graphics) {
         var y = _dropIndex >= _rows.Count
             ? _contentHeight
-            : _rowTops[_dropIndex] + (_dropUpperHalf ? 0 : RowHeight(_rows[_dropIndex]));
+            : _rowTops[_dropIndex] + (_dropUpperHalf ? 0 : RowHeight(_dropIndex));
         y = Math.Clamp(y + AutoScrollPosition.Y, 1, Math.Max(1, ClientSize.Height - 2));
         using var pen = new Pen(SystemColors.Highlight, LogicalToDeviceUnits(2));
         graphics.DrawLine(pen, _padding, y, ClientSize.Width - _padding, y);

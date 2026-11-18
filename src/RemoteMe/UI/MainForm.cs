@@ -162,7 +162,8 @@ internal sealed class MainForm : Form {
         var area = Screen.FromControl(this).WorkingArea;
         Size = new Size(Math.Min(Width, area.Width * 4 / 5), Math.Min(Height, area.Height * 4 / 5));
         CenterToScreen();
-        _split.Panel1MinSize = LogicalToDeviceUnits(200);
+        ApplyListMinimum();
+        _clock.MinimumWidthChanged += (_, _) => ApplyListMinimum();
         _split.SplitterDistance = LogicalToDeviceUnits(300);
         _hotkeys = new HotkeyHook(OnHotkey);
         _list.Focus();
@@ -533,6 +534,15 @@ internal sealed class MainForm : Form {
     private void ToggleList() {
         _split.Panel1Collapsed = !_split.Panel1Collapsed;
         _listStrip.Visible = _split.Panel1Collapsed;
+    }
+
+    // The list gets as narrow as the clock lets it, so the city and its UTC offset stay whole (decided on
+    // 2026-11-19, instead of a fixed 200 pixels).
+    private void ApplyListMinimum() {
+        _split.Panel1MinSize = _clock.MinimumWidth;
+        if (_split.SplitterDistance < _clock.MinimumWidth) {
+            _split.SplitterDistance = _clock.MinimumWidth;
+        }
     }
 
     // The main window covers its monitor, taskbar included, with no title bar; the list stays. Only the

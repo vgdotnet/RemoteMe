@@ -55,6 +55,12 @@ internal sealed class ClockPanel : Control {
     [Browsable(false)]
     public string ZoneName => _zone?.DisplayName ?? $"{LocalName}: {TimeZoneInfo.Local.DisplayName}";
 
+    // The narrowest width that shows the date, the time and the city with its offset whole.
+    [Browsable(false)]
+    public int MinimumWidth { get; private set; }
+
+    public event EventHandler? MinimumWidthChanged;
+
     protected override void Dispose(bool disposing) {
         if (disposing) {
             SystemEvents.TimeChanged -= OnSystemTimeChanged;
@@ -83,12 +89,7 @@ internal sealed class ClockPanel : Control {
     protected override void OnPaint(PaintEventArgs e) {
         var graphics = e.Graphics;
         graphics.Clear(_pressed ? Palette.Pressed : _hover ? Palette.Hover : BackColor);
-        var zone = _zone ?? TimeZoneInfo.Local;
-        var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone);
-        var date = now.ToString("ddd d MMM", CultureInfo.InvariantCulture);
-        var time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
-        var city = _zone is null ? LocalName : ClockZone.CityName(_zone);
-        var place = $"{city} · {ClockZone.FormatOffset(now.Offset)}";
+        var (date, time, place) = Lines();
 
         var top = _padding;
         DrawLine(graphics, date, Font, _textInk, _lineHeight, top, SystemColors.GrayText);
@@ -167,7 +168,33 @@ internal sealed class ClockPanel : Control {
         _textInk = Ink("H0", Font);
         _timeInk = Ink("00:00", _timeFont);
         Height = _padding * 2 + _textInk.Height * 2 + _timeInk.Height + _gap * 2;
+        UpdateMinimumWidth();
         Invalidate();
+    }
+
+    private (string Date, string Time, string Place) Lines() {
+        var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _zone ?? TimeZoneInfo.Local);
+        var city = _zone is null ? LocalName : ClockZone.CityName(_zone);
+        return (
+            now.ToString("ddd d MMM", CultureInfo.InvariantCulture),
+            now.ToString("HH:mm", CultureInfo.InvariantCulture),
+            $"{city} · {ClockZone.FormatOffset(now.Offset)}");
+    }
+
+    // Measured again with the zone, the font and every minute, since the date and the offset change.
+    private void UpdateMinimumWidth() {
+        if (_timeFont is null) {
+            return;
+        }
+        var (date, time, place) = Lines();
+        var widest = Math.Max(
+            Math.Max(TextRenderer.MeasureText(date, Font, Size.Empty, TextFlags).Width, TextRenderer.MeasureText(place, Font, Size.Empty, TextFlags).Width),
+            TextRenderer.MeasureText(time, _timeFont, Size.Empty, TextFlags).Width);
+        var width = _padding * 2 + widest;
+        if (width != MinimumWidth) {
+            MinimumWidth = width;
+            MinimumWidthChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     // Lines are put by the ink of their capitals and digits, not by the box TextRenderer draws in, so the
@@ -201,11 +228,13 @@ internal sealed class ClockPanel : Control {
     private void ShowZone() {
         _zone = ClockZone.Find(_zoneId);
         AccessibleName = $"Clock, {(_zone is null ? LocalName : ClockZone.CityName(_zone))}. Change the time zone";
+        UpdateMinimumWidth();
         Invalidate();
     }
 
     // Repaints and sets the timer to the start of the next minute.
     private void ShowTime() {
+        UpdateMinimumWidth();
         Invalidate();
         var now = DateTime.Now;
         _timer.Interval = Math.Max(1, 60_000 - now.Second * 1000 - now.Millisecond + 50);

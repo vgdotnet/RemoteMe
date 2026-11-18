@@ -100,10 +100,12 @@ Decisions made on 2026-11-12 and 2026-11-13.
 - **Connection list on the left.** Groups without a root node and without tree lines (a section caption
   with a collapse arrow; while there are no groups, a flat list). The caption is a band tinted with
   the accent color of the Windows settings (the selection color in high contrast), with a bar of that
-  color on the left and the number of its connections on the right, and a gap above it, except for the first row (decided on
-  2026-11-17; the accent color and no gap above the first row on 2026-11-18). A new accent color in the Windows settings repaints it. Two lines per connection: the name in bold (decided on 2026-11-18), and
-  below it the user name and address in gray. Status dot: green - connected, yellow - connecting or
-  reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The whole row of the session currently on screen is highlighted. Actions
+  color on the left and the number of its connections on the right (decided on 2026-11-17; the accent
+  color on 2026-11-18). There is no gap between the captions and the rows: collapsed groups stand band to
+  band (decided on 2026-11-18). A new accent color in the Windows settings repaints it. Two lines per connection: the name in bold (decided on 2026-11-18), and
+  below it the user name and address in gray. Status dot on the line of the name (decided on 2026-11-18): green - connected, yellow - connecting or
+  reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The row of the session currently on screen is highlighted
+  by a rounded plate with the same margin on every side (decided on 2026-11-18). Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
   menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button

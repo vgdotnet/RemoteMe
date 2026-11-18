@@ -39,7 +39,6 @@ internal sealed class ConnectionList : ScrollableControl {
     private int _dotSize;
     private int _textLeft;
     private int _menuButtonSize;
-    private int _groupGap;
     private int _rowInset;
     private int _cornerRadius;
     private int _accentWidth;
@@ -295,8 +294,7 @@ internal sealed class ConnectionList : ScrollableControl {
         _boldFont = new Font(Font, FontStyle.Bold);
         _lineHeight = TextRenderer.MeasureText("Ag", Font, Size.Empty, TextFormatFlags.NoPadding).Height;
         _padding = LogicalToDeviceUnits(10);
-        _connectionRowHeight = _lineHeight * 2 + LogicalToDeviceUnits(16);
-        _groupGap = LogicalToDeviceUnits(6);
+        _connectionRowHeight = _lineHeight * 2 + _padding * 2;
         _groupBandHeight = _lineHeight + LogicalToDeviceUnits(14);
         _dotSize = LogicalToDeviceUnits(10);
         _textLeft = _padding * 2 + _dotSize;
@@ -426,10 +424,7 @@ internal sealed class ConnectionList : ScrollableControl {
     private bool IsUpperHalf(int index, int clientY) =>
         index < _rows.Count && clientY - AutoScrollPosition.Y < _rowTops[index] + RowHeight(index) / 2;
 
-    private int RowHeight(int index) => _rows[index] is GroupRow ? GapAbove(index) + _groupBandHeight : _connectionRowHeight;
-
-    // The gap above a group caption sets it apart from the rows above it, so the first row has none.
-    private int GapAbove(int index) => index > 0 && _rows[index] is GroupRow ? _groupGap : 0;
+    private int RowHeight(int index) => _rows[index] is GroupRow ? _groupBandHeight : _connectionRowHeight;
 
     private Rectangle RowBounds(int index) =>
         new(0, _rowTops[index] + AutoScrollPosition.Y, ClientSize.Width, RowHeight(index));
@@ -440,10 +435,12 @@ internal sealed class ConnectionList : ScrollableControl {
         _menuButtonSize,
         _menuButtonSize);
 
+    // The plate of the selected or hovered row keeps the same margin on every side, and its text the same
+    // padding inside it; the status dot stands on the line of the name.
     private void PaintConnection(Graphics graphics, Connection connection, Rectangle bounds, int index) {
         var active = connection.Id == _activeConnectionId;
         var hover = index == _hoverIndex && !_dragging;
-        var plate = Rectangle.FromLTRB(bounds.Left + _rowInset, bounds.Top + 1, bounds.Right - _rowInset, bounds.Bottom - 1);
+        var plate = Rectangle.Inflate(bounds, -_rowInset, -_rowInset);
         if (active) {
             FillRounded(graphics, SystemColors.Highlight, plate, _cornerRadius);
         } else if (hover) {
@@ -452,11 +449,11 @@ internal sealed class ConnectionList : ScrollableControl {
         var foreground = active ? SystemColors.HighlightText : SystemColors.ControlText;
         var secondary = active ? SystemColors.HighlightText : SystemColors.GrayText;
 
-        var dot = new Rectangle(bounds.Left + _padding, bounds.Top + (bounds.Height - _dotSize) / 2, _dotSize, _dotSize);
+        var textTop = bounds.Top + (bounds.Height - _lineHeight * 2) / 2;
+        var dot = new Rectangle(bounds.Left + _padding, textTop + (_lineHeight - _dotSize) / 2, _dotSize, _dotSize);
         PaintStatusDot(graphics, dot, StatusOf(connection.Id), active);
 
         var textRight = hover ? MenuButtonBounds(bounds).Left - _padding / 2 : bounds.Right - _padding;
-        var textTop = bounds.Top + (bounds.Height - _lineHeight * 2) / 2;
         var nameBounds = new Rectangle(bounds.Left + _textLeft, textTop, textRight - bounds.Left - _textLeft, _lineHeight);
         TextRenderer.DrawText(graphics, connection.Name, _boldFont ?? Font, nameBounds, foreground, TextFlags);
         TextRenderer.DrawText(graphics, Details(connection), Font, nameBounds with { Y = nameBounds.Bottom }, secondary, TextFlags);
@@ -470,9 +467,8 @@ internal sealed class ConnectionList : ScrollableControl {
     }
 
     // A group caption is a tinted band with an accent bar on the left and the number of its connections
-    // on the right; the gap above the band sets the groups apart.
-    private void PaintGroup(Graphics graphics, GroupRow group, Rectangle bounds, int index) {
-        var band = Rectangle.FromLTRB(bounds.Left, bounds.Top + GapAbove(index), bounds.Right, bounds.Bottom);
+    // on the right.
+    private void PaintGroup(Graphics graphics, GroupRow group, Rectangle band, int index) {
         using (var brush = new SolidBrush(index == _hoverIndex && !_dragging ? Palette.GroupBandHover : Palette.GroupBand)) {
             graphics.FillRectangle(brush, band);
         }

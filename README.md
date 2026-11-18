@@ -105,7 +105,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   band (decided on 2026-11-18). A new accent color in the Windows settings repaints it. Two lines per connection: the name in bold (decided on 2026-11-18), and
   below it the user name and address in gray. Status dot on the line of the name (decided on 2026-11-18): green - connected, yellow - connecting or
   reconnecting (decided on 2026-11-13), empty circle - not connected, red - error. The row of the session currently on screen is highlighted
-  by a rounded plate with the same margin on every side (decided on 2026-11-18). Actions
+  edge to edge, with square corners and no margin around it, and a hovered row the same way in a light
+  tint (decided on 2026-11-19). Actions
   (edit, disconnect, delete) are available from a three-dot button on hover and from the right-click
   menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button

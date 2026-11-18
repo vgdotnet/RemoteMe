@@ -44,7 +44,6 @@ internal sealed class ConnectionList : ScrollableControl {
     private int _textLeft;
     private int _menuButtonSize;
     private int _rowInset;
-    private int _cornerRadius;
     private int _accentWidth;
     private int _compactWidth;
     private int _circleSize;
@@ -344,7 +343,6 @@ internal sealed class ConnectionList : ScrollableControl {
         _textLeft = _padding * 2 + _dotSize;
         _menuButtonSize = LogicalToDeviceUnits(26);
         _rowInset = LogicalToDeviceUnits(4);
-        _cornerRadius = LogicalToDeviceUnits(4);
         _accentWidth = LogicalToDeviceUnits(3);
         _compactWidth = LogicalToDeviceUnits(44);
         _circleSize = LogicalToDeviceUnits(30);
@@ -519,16 +517,14 @@ internal sealed class ConnectionList : ScrollableControl {
         _menuButtonSize,
         _menuButtonSize);
 
-    // The plate of the selected or hovered row keeps the same margin on every side, and its text the same
-    // padding inside it; the status dot stands on the line of the name.
+    // The selected and the hovered row are filled edge to edge, with square corners (decided on
+    // 2026-11-19). The status dot stands on the line of the name.
     private void PaintConnection(Graphics graphics, Connection connection, Rectangle bounds, int index) {
         var active = connection.Id == _activeConnectionId;
         var hover = index == _hoverIndex && !_dragging;
-        var plate = Rectangle.Inflate(bounds, -_rowInset, -_rowInset);
-        if (active) {
-            FillRounded(graphics, SystemColors.Highlight, plate, _cornerRadius);
-        } else if (hover) {
-            FillRounded(graphics, Palette.Hover, plate, _cornerRadius);
+        if (active || hover) {
+            using var fill = new SolidBrush(active ? SystemColors.Highlight : Palette.Hover);
+            graphics.FillRectangle(fill, bounds);
         }
         var foreground = active ? SystemColors.HighlightText : SystemColors.ControlText;
         var secondary = active ? SystemColors.HighlightText : SystemColors.GrayText;
@@ -546,12 +542,14 @@ internal sealed class ConnectionList : ScrollableControl {
             PaintMenuButton(graphics, MenuButtonBounds(bounds), foreground);
         }
         if (Focused && index == _focusIndex) {
-            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(plate, -1, -1), foreground, active ? SystemColors.Highlight : BackColor);
+            ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(bounds, -1, -1), foreground,
+                active ? SystemColors.Highlight : hover ? Palette.Hover : BackColor);
         }
     }
 
     // A circle in the color of the state with the initials of the name; a line above the first circle of
-    // each further group, a plate on hover and a ring around the session on screen.
+    // each further group, the cell filled on hover as a row of the list is, and a ring around the session
+    // on screen.
     private void PaintCircle(Graphics graphics, Connection connection, Rectangle bounds, int index) {
         var cell = bounds;
         if (_sectionStarts.Contains(index)) {
@@ -562,7 +560,8 @@ internal sealed class ConnectionList : ScrollableControl {
             cell = Rectangle.FromLTRB(bounds.Left, bounds.Top + _sectionGap, bounds.Right, bounds.Bottom);
         }
         if (index == _hoverIndex) {
-            FillRounded(graphics, Palette.Hover, Rectangle.Inflate(cell, -_rowInset / 2, -_rowInset / 2), _cornerRadius);
+            using var hover = new SolidBrush(Palette.Hover);
+            graphics.FillRectangle(hover, cell);
         }
         var circle = new Rectangle(cell.Left + (cell.Width - _circleSize) / 2, cell.Top + (cell.Height - _circleSize) / 2, _circleSize, _circleSize);
         var (fill, text) = StatusOf(connection.Id) switch {

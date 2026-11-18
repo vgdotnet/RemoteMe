@@ -5,8 +5,8 @@ using RemoteMe.Core.Clock;
 
 namespace RemoteMe.UI;
 
-// The clock above the list buttons: the time of the chosen zone in large digits, and under it the zone's
-// city, UTC offset and date. A click raises Click, which asks for another zone.
+// The clock above the list buttons: the date, the time of the chosen zone in large digits, and the zone's
+// city with its UTC offset. A click raises Click, which asks for another zone.
 [DesignerCategory("Code")]
 internal sealed class ClockPanel : Control {
     public const string LocalName = "Local time";
@@ -18,9 +18,11 @@ internal sealed class ClockPanel : Control {
     private TimeZoneInfo? _zone;
     private Font? _timeFont;
     private int _padding;
-    private int _top;
-    private int _timeHeight;
+    private int _gap;
     private int _lineHeight;
+    private int _timeHeight;
+    private (int Top, int Height) _textInk;
+    private (int Top, int Height) _timeInk;
     private bool _hover;
     private bool _pressed;
 
@@ -83,24 +85,17 @@ internal sealed class ClockPanel : Control {
         graphics.Clear(_pressed ? Palette.Pressed : _hover ? Palette.Hover : BackColor);
         var zone = _zone ?? TimeZoneInfo.Local;
         var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone);
-        var width = ClientSize.Width - _padding * 2;
-        var time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
-        var offset = ClockZone.FormatOffset(now.Offset);
         var date = now.ToString("ddd d MMM", CultureInfo.InvariantCulture);
+        var time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
         var city = _zone is null ? LocalName : ClockZone.CityName(_zone);
-        var timeFont = _timeFont ?? Font;
+        var place = $"{city} · {ClockZone.FormatOffset(now.Offset)}";
 
-        TextRenderer.DrawText(graphics, time, timeFont, new Rectangle(_padding, _top, width, _timeHeight), ForeColor, TextFlags);
-        var offsetTop = _top + Ascent(timeFont) - Ascent(Font);
-        TextRenderer.DrawText(graphics, offset, Font, new Rectangle(_padding, offsetTop, width, _lineHeight),
-            SystemColors.GrayText, TextFlags | TextFormatFlags.Right);
-
-        var secondTop = _top + _timeHeight;
-        var dateWidth = TextRenderer.MeasureText(graphics, date, Font, Size.Empty, TextFlags).Width;
-        TextRenderer.DrawText(graphics, date, Font, new Rectangle(_padding, secondTop, width, _lineHeight),
-            SystemColors.GrayText, TextFlags | TextFormatFlags.Right);
-        TextRenderer.DrawText(graphics, city, Font, new Rectangle(_padding, secondTop, Math.Max(0, width - dateWidth - _padding), _lineHeight),
-            SystemColors.GrayText, TextFlags | TextFormatFlags.EndEllipsis);
+        var top = _padding;
+        DrawLine(graphics, date, Font, _textInk, _lineHeight, top, SystemColors.GrayText);
+        top += _textInk.Height + _gap;
+        DrawLine(graphics, time, _timeFont ?? Font, _timeInk, _timeHeight, top, ForeColor);
+        top += _timeInk.Height + _gap;
+        DrawLine(graphics, place, Font, _textInk, _lineHeight, top, SystemColors.GrayText);
 
         if (Focused && ShowFocusCues) {
             ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(ClientRectangle, -2, -2));
@@ -166,11 +161,41 @@ internal sealed class ClockPanel : Control {
         _timeFont?.Dispose();
         _timeFont = new Font(Font.FontFamily, Font.SizeInPoints * 2.4f);
         _padding = LogicalToDeviceUnits(12);
-        _top = LogicalToDeviceUnits(4);
-        _timeHeight = TextRenderer.MeasureText("00:00", _timeFont, Size.Empty, TextFlags).Height;
+        _gap = LogicalToDeviceUnits(6);
         _lineHeight = TextRenderer.MeasureText("Ag", Font, Size.Empty, TextFlags).Height;
-        Height = _top + _timeHeight + _lineHeight + LogicalToDeviceUnits(4);
+        _timeHeight = TextRenderer.MeasureText("00:00", _timeFont, Size.Empty, TextFlags).Height;
+        _textInk = Ink("H0", Font);
+        _timeInk = Ink("00:00", _timeFont);
+        Height = _padding * 2 + _textInk.Height * 2 + _timeInk.Height + _gap * 2;
         Invalidate();
+    }
+
+    // Lines are put by the ink of their capitals and digits, not by the box TextRenderer draws in, so the
+    // gaps between the date, the time and the city look the same.
+    private void DrawLine(Graphics graphics, string text, Font font, (int Top, int Height) ink, int height, int inkTop, Color color) {
+        var bounds = new Rectangle(_padding, inkTop - ink.Top, ClientSize.Width - _padding * 2, height);
+        TextRenderer.DrawText(graphics, text, font, bounds, color, TextFlags | TextFormatFlags.EndEllipsis);
+    }
+
+    // Where the ink of the sample starts under the top of its box, and how tall it is.
+    private static (int Top, int Height) Ink(string sample, Font font) {
+        var size = TextRenderer.MeasureText(sample, font, Size.Empty, TextFlags);
+        using var bitmap = new Bitmap(size.Width, size.Height);
+        using (var graphics = Graphics.FromImage(bitmap)) {
+            graphics.Clear(Color.White);
+            TextRenderer.DrawText(graphics, sample, font, Point.Empty, Color.Black, TextFlags);
+        }
+        int top = -1, bottom = -1;
+        for (var y = 0; y < bitmap.Height; y++) {
+            for (var x = 0; x < bitmap.Width; x++) {
+                if (bitmap.GetPixel(x, y).R < 128) {
+                    top = top < 0 ? y : top;
+                    bottom = y;
+                    break;
+                }
+            }
+        }
+        return top < 0 ? (0, size.Height) : (top, bottom - top + 1);
     }
 
     private void ShowZone() {
@@ -197,11 +222,5 @@ internal sealed class ClockPanel : Control {
             ShowZone();
             ShowTime();
         });
-    }
-
-    // The distance from the top of the text to its baseline, to put the offset on the time's baseline.
-    private int Ascent(Font font) {
-        var family = font.FontFamily;
-        return (int)Math.Round(font.SizeInPoints * DeviceDpi / 72f * family.GetCellAscent(font.Style) / family.GetEmHeight(font.Style));
     }
 }

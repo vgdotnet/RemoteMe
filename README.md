@@ -112,8 +112,9 @@ Decisions made on 2026-11-12 and 2026-11-13.
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
   and "Log" (decided on 2026-11-13).
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
-  line and the buttons: the time of the chosen time zone in large digits, without seconds, with its UTC
-  offset on the right; under it the zone's main city and the date. The city comes from the zone's IANA
+  line and the buttons: the date, under it the time of the chosen time zone in large digits, without
+  seconds, and under that the zone's main city with its UTC offset, "Yekaterinburg · UTC+5" (this order
+  decided on 2026-11-19, option 3 of six mockups); the gaps between the lines are even. The city comes from the zone's IANA
   name, since Windows names a zone by several cities: "Brussels, Copenhagen, Madrid, Paris" shows
   Paris. A left click on the clock, or "Clock time zone..." in the "..." menu, opens a window with the
   Windows time zones and a search box that finds a city or a UTC offset (+7, -3:30), the offset of

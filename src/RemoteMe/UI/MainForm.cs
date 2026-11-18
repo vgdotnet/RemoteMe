@@ -77,7 +77,7 @@ internal sealed class MainForm : Form {
             AutoSize = true,
             ColumnCount = 4,
             RowCount = 1,
-            Padding = new Padding(6, 4, 6, 6),
+            Padding = Padding.Empty,
             BackColor = SystemColors.Window,
         };
         _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -569,7 +569,8 @@ internal sealed class MainForm : Form {
         SetCompactList(_split.SplitterDistance < full);
     }
 
-    // The compact strip has no room for the clock, and its buttons stand one under another.
+    // The compact strip has no room for the clock, and its buttons stand one under another, as wide as
+    // the strip.
     private void SetCompactList(bool compact) {
         if (_list.Compact == compact) {
             return;
@@ -584,7 +585,6 @@ internal sealed class MainForm : Form {
             _bottomBar.ColumnCount = 1;
             _bottomBar.RowCount = 3;
             _bottomBar.ColumnStyles[0] = new ColumnStyle(SizeType.Percent, 100);
-            _bottomBar.Padding = Scaled(0, 4, 0, 4);
         } else {
             _bottomBar.ColumnCount = 4;
             _bottomBar.RowCount = 1;
@@ -592,17 +592,12 @@ internal sealed class MainForm : Form {
             _bottomBar.SetCellPosition(_addButton, new TableLayoutPanelCellPosition(0, 0));
             _bottomBar.SetCellPosition(_fullScreenButton, new TableLayoutPanelCellPosition(2, 0));
             _bottomBar.SetCellPosition(_moreButton, new TableLayoutPanelCellPosition(3, 0));
-            _bottomBar.Padding = Scaled(6, 4, 6, 6);
         }
         foreach (var button in new[] { _addButton, _fullScreenButton, _moreButton }) {
-            button.Anchor = compact ? AnchorStyles.Top : AnchorStyles.Top | AnchorStyles.Left;
-            button.Margin = compact ? Scaled(0, 2, 0, 2) : Scaled(2, 0, 2, 0);
+            button.Anchor = compact ? AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right : AnchorStyles.Top | AnchorStyles.Left;
         }
         _bottomBar.ResumeLayout(true);
     }
-
-    private Padding Scaled(int left, int top, int right, int bottom) =>
-        new(LogicalToDeviceUnits(left), LogicalToDeviceUnits(top), LogicalToDeviceUnits(right), LogicalToDeviceUnits(bottom));
 
     // The main window covers its monitor, taskbar included, with no title bar; the list stays. Only the
     // border style changes, so the window and its session controls are kept.
@@ -626,12 +621,14 @@ internal sealed class MainForm : Form {
         ShowMainFullScreenState();
     }
 
+    // The buttons have no margins and the bar no padding, so a hovered button is filled up to the edges
+    // like the clock and the rows of the list (decided on 2026-11-19).
     private Button CreateIconButton(string glyph, string name) {
         var button = new Button {
             Text = glyph,
             Font = _glyphFont,
-            Size = new Size(36, 32),
-            Margin = new Padding(2, 0, 2, 0),
+            Size = new Size(40, 40),
+            Margin = Padding.Empty,
             FlatStyle = FlatStyle.Flat,
             BackColor = SystemColors.Window,
             ForeColor = SystemColors.ControlText,

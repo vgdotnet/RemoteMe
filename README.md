@@ -114,7 +114,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
-  and "Log" (decided on 2026-11-13).
+  and "Log" (decided on 2026-11-13). The buttons have no margins, so a hovered button is filled up to
+  the edges, like the clock and the rows (decided on 2026-11-19).
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
   line and the buttons: the date, under it the time of the chosen time zone in large digits, without
   seconds, and under that the zone's main city with its UTC offset, "Yekaterinburg · UTC+5" (this order

@@ -147,6 +147,10 @@ internal sealed class MainForm : Form {
         _moreMenu.Items.Add(background);
         _moreMenu.Items.Add("Change master password...", null, (_, _) => ChangeMasterPassword());
         _moreMenu.Items.Add("Log", null, (_, _) => ShowLog());
+        _moreMenu.Items.Add("About RemoteMe", null, (_, _) => {
+            using var about = new AboutForm(_store.Path);
+            about.ShowDialog(this);
+        });
 
         ResumeLayout(false);
 
@@ -593,14 +597,14 @@ internal sealed class MainForm : Form {
         SetCompactList(_split.SplitterDistance < full);
     }
 
-    // The compact strip has no room for the clock, and its buttons stand one under another, as wide as
-    // the strip.
+    // The compact strip has room only for the time of the clock, and its buttons stand one under
+    // another, as wide as the strip.
     private void SetCompactList(bool compact) {
         if (_list.Compact == compact) {
             return;
         }
         _list.Compact = compact;
-        _clock.Visible = !compact;
+        _clock.Compact = compact;
         _bottomBar.SuspendLayout();
         if (compact) {
             _bottomBar.SetCellPosition(_addButton, new TableLayoutPanelCellPosition(0, 0));

@@ -19,6 +19,8 @@ internal sealed class ClockPanel : Control {
     private Font? _timeFont;
     private int _padding;
     private int _gap;
+    private int _compactPadding;
+    private bool _compact;
     private int _lineHeight;
     private int _timeHeight;
     private (int Top, int Height) _textInk;
@@ -60,6 +62,19 @@ internal sealed class ClockPanel : Control {
     [Browsable(false)]
     public int MinimumWidth { get; private set; }
 
+    // Only the time, in the text font, for the compact strip of the list (decided on 2026-11-19).
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Compact {
+        get => _compact;
+        set {
+            if (_compact != value) {
+                _compact = value;
+                UpdateMetrics();
+            }
+        }
+    }
+
     public event EventHandler? MinimumWidthChanged;
 
     protected override void Dispose(bool disposing) {
@@ -96,6 +111,14 @@ internal sealed class ClockPanel : Control {
             graphics.FillRectangle(fill, ClientRectangle);
         }
         var (date, time, place) = Lines();
+        if (_compact) {
+            var line = new Rectangle(0, _compactPadding - _textInk.Top, ClientSize.Width, _lineHeight);
+            DrawText(graphics, time, Font, line, ForeColor, TextFormatFlags.HorizontalCenter);
+            if (Focused && ShowFocusCues) {
+                ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(ClientRectangle, -2, -2));
+            }
+            return;
+        }
         var secondary = Palette.Blend(SystemColors.GrayText, SystemColors.ControlText, 0.75);
 
         var top = _padding;
@@ -174,7 +197,10 @@ internal sealed class ClockPanel : Control {
         _timeHeight = TextRenderer.MeasureText("00:00", _timeFont, Size.Empty, TextFlags).Height;
         _textInk = Ink("H0", Font);
         _timeInk = Ink("00:00", _timeFont);
-        Height = _padding * 2 + _textInk.Height * 2 + _timeInk.Height + _gap * 2;
+        _compactPadding = LogicalToDeviceUnits(8);
+        Height = _compact
+            ? _compactPadding * 2 + _textInk.Height
+            : _padding * 2 + _textInk.Height * 2 + _timeInk.Height + _gap * 2;
         UpdateMinimumWidth();
         Invalidate();
     }
@@ -188,7 +214,8 @@ internal sealed class ClockPanel : Control {
             $"{city} · {ClockZone.FormatOffset(now.Offset)}");
     }
 
-    // Measured again with the zone, the font and every minute, since the date and the offset change.
+    // Measured again with the zone, the font and every minute, since the date and the offset change. It
+    // is the width of the full clock in the compact view too, since the list snaps by it.
     private void UpdateMinimumWidth() {
         if (_timeFont is null) {
             return;
@@ -206,20 +233,22 @@ internal sealed class ClockPanel : Control {
 
     // Lines are put by the ink of their capitals and digits, not by the box TextRenderer draws in, so the
     // gaps between the date, the time and the city look the same.
-    private void DrawLine(Graphics graphics, string text, Font font, (int Top, int Height) ink, int height, int inkTop, Color color) {
-        var bounds = new Rectangle(_padding, inkTop - ink.Top, ClientSize.Width - _padding * 2, height);
-        // The glow is the text drawn in white a pixel or two to every side; a hovered clock has a plain fill.
+    private void DrawLine(Graphics graphics, string text, Font font, (int Top, int Height) ink, int height, int inkTop, Color color) =>
+        DrawText(graphics, text, font, new Rectangle(_padding, inkTop - ink.Top, ClientSize.Width - _padding * 2, height), color, TextFormatFlags.EndEllipsis);
+
+    // The glow is the text drawn in white a pixel or two to every side; a hovered clock has a plain fill.
+    private void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color color, TextFormatFlags flags) {
         if (!_hover && !_pressed) {
             var radius = LogicalToDeviceUnits(2);
             for (var dx = -radius; dx <= radius; dx++) {
                 for (var dy = -radius; dy <= radius; dy++) {
                     if ((dx != 0 || dy != 0) && dx * dx + dy * dy <= radius * radius + 1) {
-                        TextRenderer.DrawText(graphics, text, font, bounds with { X = bounds.X + dx, Y = bounds.Y + dy }, SystemColors.Window, TextFlags | TextFormatFlags.EndEllipsis);
+                        TextRenderer.DrawText(graphics, text, font, bounds with { X = bounds.X + dx, Y = bounds.Y + dy }, SystemColors.Window, TextFlags | flags);
                     }
                 }
             }
         }
-        TextRenderer.DrawText(graphics, text, font, bounds, color, TextFlags | TextFormatFlags.EndEllipsis);
+        TextRenderer.DrawText(graphics, text, font, bounds, color, TextFlags | flags);
     }
 
     // Where the ink of the sample starts under the top of its box, and how tall it is.

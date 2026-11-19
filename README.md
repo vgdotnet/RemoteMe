@@ -116,7 +116,7 @@ Decisions made on 2026-11-12 and 2026-11-13.
   menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
-  and "Log" (decided on 2026-11-13), and also "Hide list", "Clock time zone..." and "Background". The buttons have no margins, so a hovered button is filled up to
+  and "Log" (decided on 2026-11-13), and also "Hide list", "Clock time zone...", "Background" and "About RemoteMe". The buttons have no margins, so a hovered button is filled up to
   the edges, like the clock and the rows (decided on 2026-11-19).
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
   line and the buttons: the date, under it the time of the chosen time zone in large digits, without
@@ -138,7 +138,7 @@ Decisions made on 2026-11-12 and 2026-11-13.
   connected) and two letters: the first two of a one-word name, or the first letters of the first two
   words; spaces, underscores and hyphens part the words (HOST - HO, Legal Data Space - LD, PRO_AGENT -
   PA). A ring marks the session on screen, and the tooltip gives the full name. Clicks, keys and the
-  right-click menu work as in the list; there is no dragging. The clock is hidden and the buttons stand
+  right-click menu work as in the list; there is no dragging. The clock shows only its time (decided on 2026-11-19) and the buttons stand
   one under another. When the circles do not fit in the height, the strip gets wider by the scroll bar.
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
@@ -158,6 +158,15 @@ Decisions made on 2026-11-12 and 2026-11-13.
   selected: the session area shows its state ("Not connected.", "Disconnected." or the reason) with a
   "Connect" or "Reconnect" button. A double click or Enter on the row connects it (decided on
   2026-11-18).
+- **About window** (decided on 2026-11-19), "About RemoteMe" at the end of the "..." menu: the icon,
+  the version with the commit the exe is built from, such as "0.6.0 (57730fa)" (the commit comes from
+  assembly metadata, since the product version of the exe stays the bare release version for
+  SignPath), one line about the program, "Copyright © 2026 Vitalii Guliaev" and the notice the GPL asks
+  an interactive program to show (no warranty, free software under the GPL version 3, with a link to
+  the license), links to the source code, the releases and the issues, what it uses (the Remote
+  Desktop component of Windows and the Segoe MDL2 Assets icon font), and the details for a problem
+  report - the version, Windows, the Remote Desktop component, the .NET runtime and the settings file -
+  with "Copy" and "Open settings folder" buttons.
 - **Doodle background of the left panel** (decided on 2026-11-19). Below the connection rows (the rows
   themselves stay white; in the compact strip the doodles go behind the circles too), behind the
   clock and the list buttons: a soft gradient with a light pattern of small doodles (monitors, clouds,

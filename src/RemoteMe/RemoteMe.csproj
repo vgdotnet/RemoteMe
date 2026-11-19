@@ -22,4 +22,12 @@
     <EmbeddedResource Include="Assets\RemoteMe.ico" LogicalName="RemoteMe.ico" />
   </ItemGroup>
 
+  <!-- The commit the exe is built from, for the About window, as assembly metadata beside the version.
+       The source control information is known only once its target has run, so the item is added here. -->
+  <Target Name="AddSourceRevisionMetadata" BeforeTargets="GetAssemblyAttributes" DependsOnTargets="InitializeSourceControlInformation">
+    <ItemGroup>
+      <AssemblyMetadata Include="SourceRevision" Value="$(SourceRevisionId)" Condition="'$(SourceRevisionId)' != ''" />
+    </ItemGroup>
+  </Target>
+
 </Project>

@@ -40,7 +40,13 @@ internal sealed class AboutForm : Form {
         var heading = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
         heading.Controls.Add(name);
         heading.Controls.Add(new Label { Text = "Version " + Version, AutoSize = true, Margin = new Padding(3, 2, 3, 0) });
-        heading.Controls.Add(DialogLayout.CreateText("A Remote Desktop client built on the Remote Desktop component of Windows."));
+        var description = DialogLayout.CreateText("A Remote Desktop client built on the Remote Desktop component of Windows.");
+        description.Margin = new Padding(3, 3, 3, 3);
+        heading.Controls.Add(description);
+        // The address of the repository in full (decided on 2026-11-19).
+        var address = CreateLink(Repository, Repository);
+        address.Margin = new Padding(3, 0, 3, 9);
+        heading.Controls.Add(address);
         grid.Controls.Add(icon, 0, 0);
         grid.Controls.Add(heading, 1, 0);
         grid.RowCount = 1;
@@ -58,7 +64,6 @@ internal sealed class AboutForm : Form {
         grid.Controls.Add(license, 1, grid.RowCount++);
 
         var links = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 6) };
-        links.Controls.Add(CreateLink("Source code", Repository));
         links.Controls.Add(CreateLink("Releases", Repository + "/releases"));
         links.Controls.Add(CreateLink("Report a problem", Repository + "/issues"));
         grid.Controls.Add(links, 1, grid.RowCount++);

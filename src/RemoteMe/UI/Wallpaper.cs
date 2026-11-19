@@ -1,4 +1,5 @@
 using System.Drawing.Drawing2D;
+using RemoteMe.Core.Model;
 
 namespace RemoteMe.UI;
 
@@ -28,7 +29,9 @@ internal static class Wallpaper {
     ];
 
     // The theme of a name from ListBackground.Names; an unknown name is the first theme.
-    public static WallpaperTheme Theme(string name) => Themes.FirstOrDefault(t => t.Name == name) ?? Themes[0];
+    // Null for ListBackground.None, the plain panel.
+    public static WallpaperTheme? Theme(string name) =>
+        name == ListBackground.None ? null : Themes.FirstOrDefault(t => t.Name == name) ?? Themes[0];
 
     public static void Paint(Graphics graphics, Rectangle bounds, WallpaperTheme theme, int dpi) {
         if (bounds.Width <= 0 || bounds.Height <= 0) {

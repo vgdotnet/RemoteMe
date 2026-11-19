@@ -165,7 +165,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   assembly metadata, since the product version of the exe stays the bare release version for
   SignPath), one line about the program, "Copyright © 2026 Vitalii Guliaev" and the notice the GPL asks
   an interactive program to show (no warranty, free software under the GPL version 3, with a link to
-  the license), links to the source code, the releases and the issues, what it uses (the Remote
+  the license), the address of the repository in full as a link, links to the releases and the issues,
+  what it uses (the Remote
   Desktop component of Windows and the Segoe MDL2 Assets icon font), and the details for a problem
   report - the version, Windows, the Remote Desktop component, the .NET runtime and the settings file -
   with "Copy" and "Open settings folder" buttons.
@@ -173,8 +174,8 @@ Decisions made on 2026-11-12 and 2026-11-13.
   themselves stay white; in the compact strip the doodles go behind the circles too), behind the
   clock and the list buttons: a soft gradient with a light pattern of small doodles (monitors, clouds,
   coffee cups, rockets, cats and the like) that the application draws itself. It comes in six colors -
-  Green (the default), Blue, Peach, Lavender, Mint and Sand - chosen with "Background" in the "..."
-  menu and kept in the settings file. The session area stays plain gray. The clock stands on the
+  Green (the default), Blue, Peach, Lavender, Mint and Sand - or None, the plain panel as it was before the doodles, chosen
+  with "Background" in the "..." menu and kept in the settings file. The session area stays plain gray. The clock stands on the
   doodles with a white glow around its text, and its date and city are nearly black (option 5 of five
   mockups).
 - **No bottom notification bar.** The disconnect reason and the connection progress are shown in the

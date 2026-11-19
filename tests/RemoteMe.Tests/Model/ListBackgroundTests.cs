@@ -9,12 +9,20 @@ public sealed class ListBackgroundTests {
         Assert.Equal("Peach", ListBackground.Of(new Settings { Background = "Peach" }));
     }
 
+    [Fact]
+    public void Of_TakesNoneAsTheLastChoice() {
+        Assert.Equal(ListBackground.None, OfChoice(ListBackground.None));
+        Assert.Equal(ListBackground.None, ListBackground.Names[^1]);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("Purple")]
     public void Of_WithoutAKnownChoice_IsTheFirstColor(string? background) {
         Assert.Equal("Green", ListBackground.Of(new Settings { Background = background }));
     }
+
+    private static string OfChoice(string background) => ListBackground.Of(new Settings { Background = background });
 
     [Fact]
     public void Background_IsLeftOutOfTheFileWhileNotChosenAndReadBack() {

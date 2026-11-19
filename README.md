@@ -9,9 +9,10 @@ and the interface contains only the connection list and the session itself.
   the exe in any folder, and the settings file is created next to it. To check the download, see
   "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-19: stages 0-7 done, v0.7.0 released (an About window in the "..." menu with the
-  version and its commit, the GPL notices, links and the details for a problem report; the compact
-  strip shows the time of the clock; v0.6.0 added a doodle background in the left panel, in one of six
+- Status as of 2026-11-19: stages 0-7 done, v0.7.1 released (the About window shows the address of the
+  repository; "None" in the "Background" menu keeps the left panel plain; v0.7.0 added an About window
+  in the "..." menu with the version and its commit, the GPL notices, links and the details for a
+  problem report, and the time of the clock in the compact strip; v0.6.0 added a doodle background in the left panel, in one of six
   colors chosen with "Background" in the "..." menu, with the clock text glowing white over it, and
   let the list buttons fill their bar without margins; v0.5.0 added a compact strip of circles when the
   list is dragged narrower than the clock, kept collapsed groups in the settings file, showed the clock

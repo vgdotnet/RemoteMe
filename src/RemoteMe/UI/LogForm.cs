@@ -1,18 +1,22 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using RemoteMe.Core.Logging;
 
 namespace RemoteMe.UI;
 
-// Shows the in-memory log and follows new entries while it is open.
+// Shows the in-memory log of this run and follows new entries while it is open. "Open log file" opens the
+// file the log is also written to, which keeps the earlier runs too.
 [DesignerCategory("Code")]
 internal sealed class LogForm : Form {
     private readonly AppLog _log;
+    private readonly string _logPath;
     private readonly ListView _entries;
 
-    public LogForm(AppLog log) {
+    public LogForm(AppLog log, string logPath) {
         _log = log;
+        _logPath = logPath;
 
         SuspendLayout();
         AutoScaleDimensions = new SizeF(96F, 96F);
@@ -38,9 +42,11 @@ internal sealed class LogForm : Form {
 
         var copy = new Button { Text = "Copy all", AutoSize = true, MinimumSize = new Size(96, 30) };
         var clear = new Button { Text = "Clear", AutoSize = true, MinimumSize = new Size(96, 30) };
+        var file = new Button { Text = "Open log file", AutoSize = true, MinimumSize = new Size(96, 30) };
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(6) };
         buttons.Controls.Add(copy);
         buttons.Controls.Add(clear);
+        buttons.Controls.Add(file);
 
         Controls.Add(_entries);
         Controls.Add(buttons);
@@ -48,6 +54,7 @@ internal sealed class LogForm : Form {
 
         copy.Click += (_, _) => CopyAll();
         clear.Click += (_, _) => _log.Clear();
+        file.Click += (_, _) => OpenFile();
         _log.Added += OnAdded;
         _log.Cleared += OnCleared;
         foreach (var entry in _log.Entries) {
@@ -110,6 +117,14 @@ internal sealed class LogForm : Form {
     private void ScrollToEnd() {
         if (_entries.Items.Count > 0) {
             _entries.EnsureVisible(_entries.Items.Count - 1);
+        }
+    }
+
+    private void OpenFile() {
+        if (File.Exists(_logPath)) {
+            Process.Start(new ProcessStartInfo(_logPath) { UseShellExecute = true });
+        } else {
+            Messages.Error(this, $"The log file is not there yet: {_logPath}");
         }
     }
 

@@ -9,7 +9,8 @@ and the interface contains only the connection list and the session itself.
   the exe in any folder, and the settings file is created next to it. To check the download, see
   "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-19: stages 0-7 done, v0.7.1 released (the About window shows the address of the
+- Status as of 2026-11-19: stages 0-7 done; in main after v0.7.1, not released yet: the log file, the
+  menus drawn by Windows and the icons of the list buttons centered by their ink. v0.7.1 released (the About window shows the address of the
   repository; "None" in the "Background" menu keeps the left panel plain; v0.7.0 added an About window
   in the "..." menu with the version and its commit, the GPL notices, links and the details for a
   problem report, and the time of the clock in the compact strip; v0.6.0 added a doodle background in the left panel, in one of six
@@ -32,7 +33,8 @@ and the interface contains only the connection list and the session itself.
 1. **Single exe.** All required DLLs are inside (self-contained single-file, Windows x64). The RDP engine
    itself (`mstscax.dll`) is part of Windows and is not included in the exe.
 2. **Portable.** No installation, nothing of our own in the registry or in the user profile. The settings
-   file, `RemoteMe.settings`, lives next to the exe.
+   file, `RemoteMe.settings`, lives next to the exe, and so does the `Logs` folder with the log file
+   (see "Log file").
 3. **Master password on startup.** It decrypts the settings file. The password is not stored anywhere,
    it is kept only in memory while the application is open. A forgotten password cannot be recovered.
    First run: there is no file yet, so the application asks for a new password (twice) and creates
@@ -120,7 +122,10 @@ Decisions made on 2026-11-12 and 2026-11-13.
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
   and "Log" (decided on 2026-11-13), and also "Hide list", "Clock time zone...", "Background" and "About RemoteMe". The buttons have no margins, so a hovered button is filled up to
-  the edges, like the clock and the rows (decided on 2026-11-19).
+  the edges, like the clock and the rows (decided on 2026-11-19). The icon of a button is centered by
+  its ink, not by the line box of the icon font, which put it two pixels too high at 150%. The menu of
+  a connection and the "..." menu are drawn by Windows itself, like the menus of other programs: their
+  size and spacing, and no gray strip on the left for images (decided on 2026-11-19).
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
   line and the buttons: the date, under it the time of the chosen time zone in large digits, without
   seconds, and under that the zone's main city with its UTC offset, "Yekaterinburg · UTC+5" (this order
@@ -180,8 +185,31 @@ Decisions made on 2026-11-12 and 2026-11-13.
   doodles with a white glow around its text, and its date and city are nearly black (option 5 of five
   mockups).
 - **No bottom notification bar.** The disconnect reason and the connection progress are shown in the
-  session area (with a "Reconnect" button). Settings file errors are shown in a message box. A log of
-  all messages is kept in memory and opens in a separate window on demand; it is not written to disk.
+  session area (with a "Reconnect" button). Settings file errors are shown in a message box. The
+  messages of this run open in the "Log" window on demand; they are also written to the log file.
+- **Log file** (decided on 2026-11-19, since RemoteMe hangs and crashes now and then). The `Logs`
+  folder next to the exe holds one file per computer, `<computer name>.log`, since the folder may be
+  shared by several computers through a cloud drive; over 1 MB it becomes `<computer name>.old.log`,
+  which replaces the previous one. Each line has the time with its offset, the level, the source and
+  the message; a stack trace follows on lines indented by a tab. The log holds:
+  - the start (version, Windows, the Remote Desktop component, .NET) and the close of RemoteMe;
+  - everything the "Log" window shows: connecting, signing in, reconnecting, disconnects with their
+    codes, settings file errors;
+  - every unhandled exception with its stack trace, including exceptions in the handlers of the Remote
+    Desktop component's events, which the component would otherwise swallow;
+  - "The window has not responded for 5 s" when the main window stops answering, and "responds again
+    after N s" when it is back. A watchdog thread checks the window once a second, so the entry is in
+    the file while the window still hangs. Silence while the computer sleeps is not counted;
+  - at the next start after a run that did not close normally (the `<computer name>.running` file
+    is still there): a line about it, and what Windows wrote to its Application log about RemoteMe
+    since that run started - "Application Error" 1000 and 1005, ".NET Runtime" 1026 with the stack,
+    "Application Hang" 1002. A crash inside the Remote Desktop component, or an exe that could not be
+    read from its disk, ends the process before RemoteMe can write anything, so these records are its
+    only trace.
+  The file is written by a thread of its own, opened only for each write, so it can be read while
+  RemoteMe runs, and text that could not be written is tried again a second later. It holds connection
+  names, addresses and user names, but no passwords. "Open log file" in the "Log" window opens it, and
+  its path is in the details of the About window.
 - **Session area:**
   - the resolution follows the window, with no scrollbars and no stretching;
   - the list can be hidden with one key or button, so the session takes the whole window: "Hide list"

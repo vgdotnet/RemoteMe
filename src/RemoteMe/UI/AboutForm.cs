@@ -17,9 +17,9 @@ internal sealed class AboutForm : Form {
     private readonly string _details;
     private readonly Bitmap _icon;
 
-    public AboutForm(string settingsPath) {
+    public AboutForm(string settingsPath, string logPath) {
         _settingsPath = settingsPath;
-        _details = Details(settingsPath);
+        _details = Details(settingsPath, logPath);
 
         SuspendLayout();
         DialogLayout.SetUp(this, "About RemoteMe");
@@ -78,7 +78,7 @@ internal sealed class AboutForm : Form {
             WordWrap = false,
             ScrollBars = ScrollBars.Horizontal,
             Width = DialogLayout.FieldWidth,
-            Height = 112,
+            Height = 128,
             Margin = new Padding(3, 3, 3, 3),
             AccessibleName = "Details for a problem report",
         };
@@ -128,7 +128,10 @@ internal sealed class AboutForm : Form {
         }
     }
 
-    private static string Details(string settingsPath) {
+    // Windows, the Remote Desktop component and the .NET runtime, for the log and a problem report.
+    public static string Platform => string.Join("; ", PlatformLines());
+
+    private static string[] PlatformLines() {
         var windows = RuntimeInformation.OSDescription;
         if (Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "DisplayVersion", null) is string release) {
             windows += $" ({release})";
@@ -137,13 +140,15 @@ internal sealed class AboutForm : Form {
         // The version text, such as 10.0.26100.8875, without the build branch after it; the number fields
         // of the file still say 6.2 for old programs.
         var rdpVersion = File.Exists(rdp) ? FileVersionInfo.GetVersionInfo(rdp).FileVersion?.Split(' ')[0] ?? "unknown" : "not found";
-        return string.Join(Environment.NewLine,
-            "RemoteMe " + Version,
+        return [
             "Windows: " + windows,
             "Remote Desktop component: " + rdpVersion,
             "Runtime: " + RuntimeInformation.FrameworkDescription,
-            "Settings file: " + settingsPath);
+        ];
     }
+
+    private static string Details(string settingsPath, string logPath) => string.Join(Environment.NewLine,
+        ["RemoteMe " + Version, .. PlatformLines(), "Settings file: " + settingsPath, "Log file: " + logPath]);
 
     private static void AddText(TableLayoutPanel grid, string text) => grid.Controls.Add(DialogLayout.CreateText(text), 1, grid.RowCount++);
 

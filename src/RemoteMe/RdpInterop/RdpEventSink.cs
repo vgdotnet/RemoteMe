@@ -12,9 +12,9 @@ internal sealed class RdpEventSink(RdpClientControl owner) : IMsTscAxEvents {
     public void OnConnected() {
     }
 
-    public void OnLoginComplete() => owner.RaiseLoginComplete();
+    public void OnLoginComplete() => Guard(() => owner.RaiseLoginComplete());
 
-    public void OnDisconnected(int discReason) => owner.RaiseDisconnected(discReason);
+    public void OnDisconnected(int discReason) => Guard(() => owner.RaiseDisconnected(discReason));
 
     public void OnEnterFullScreenMode() {
     }
@@ -25,9 +25,9 @@ internal sealed class RdpEventSink(RdpClientControl owner) : IMsTscAxEvents {
     public void OnChannelReceivedData(string chanName, string data) {
     }
 
-    public void OnRequestGoFullScreen() => owner.RaiseRequestGoFullScreen();
+    public void OnRequestGoFullScreen() => Guard(() => owner.RaiseRequestGoFullScreen());
 
-    public void OnRequestLeaveFullScreen() => owner.RaiseRequestLeaveFullScreen();
+    public void OnRequestLeaveFullScreen() => Guard(() => owner.RaiseRequestLeaveFullScreen());
 
     public void OnFatalError(int errorCode) {
     }
@@ -71,7 +71,7 @@ internal sealed class RdpEventSink(RdpClientControl owner) : IMsTscAxEvents {
     public void OnRemoteWindowDisplayed(bool displayed, object hwnd, int windowAttribute) {
     }
 
-    public void OnLogonError(int error) => owner.RaiseLogonNotice(error);
+    public void OnLogonError(int error) => Guard(() => owner.RaiseLogonNotice(error));
 
     public void OnFocusReleased(int direction) {
     }
@@ -94,8 +94,18 @@ internal sealed class RdpEventSink(RdpClientControl owner) : IMsTscAxEvents {
     public void OnDevicesButtonPressed() {
     }
 
-    public void OnAutoReconnected() => owner.RaiseAutoReconnected();
+    public void OnAutoReconnected() => Guard(() => owner.RaiseAutoReconnected());
 
     public void OnAutoReconnecting2(int disconnectReason, bool networkAvailable, int attemptCount, int maxAttemptCount) =>
-        owner.RaiseAutoReconnecting();
+        Guard(() => owner.RaiseAutoReconnecting());
+
+    // An exception thrown back into the component would become an error code there and be lost, so it
+    // goes to the application's handler, which writes it to the log and shows it.
+    private static void Guard(Action raise) {
+        try {
+            raise();
+        } catch (Exception ex) {
+            Application.OnThreadException(ex);
+        }
+    }
 }

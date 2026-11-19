@@ -8,8 +8,8 @@ public enum LogLevel {
 
 public sealed record LogEntry(DateTimeOffset Time, LogLevel Level, string Source, string Message);
 
-// Kept in memory only, never written to disk. Once full, the oldest entries are dropped. Callers never
-// pass secrets here.
+// The entries of this run, kept in memory for the log window; once full, the oldest are dropped. The
+// application also writes every entry to a file (LogFile). Callers never pass secrets here.
 public sealed class AppLog {
     private readonly Lock _gate = new();
     private readonly Queue<LogEntry> _entries = new();

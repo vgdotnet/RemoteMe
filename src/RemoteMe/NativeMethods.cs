@@ -60,4 +60,45 @@ internal static class NativeMethods {
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? moduleName);
+
+    public const uint MfString = 0x0000;
+    public const uint MfGrayed = 0x0001;
+    public const uint MfChecked = 0x0008;
+    public const uint MfPopup = 0x0010;
+    public const uint MfSeparator = 0x0800;
+    public const uint TpmLeftAlign = 0x0000;
+    public const uint TpmRightAlign = 0x0008;
+    public const uint TpmTopAlign = 0x0000;
+    public const uint TpmBottomAlign = 0x0020;
+    public const uint TpmVertical = 0x0040;
+    public const uint TpmRightButton = 0x0002;
+    public const uint TpmReturnCmd = 0x0100;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Rect {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TpmParams {
+        public int Size;
+        public Rect Exclude;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr CreatePopupMenu();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AppendMenu(IntPtr menu, uint flags, UIntPtr idOrSubmenu, string? text);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DestroyMenu(IntPtr menu);
+
+    [DllImport("user32.dll")]
+    public static extern int TrackPopupMenuEx(IntPtr menu, uint flags, int x, int y, IntPtr hwnd, ref TpmParams parameters);
 }

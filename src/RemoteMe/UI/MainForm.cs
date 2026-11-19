@@ -20,6 +20,7 @@ internal sealed class MainForm : Form {
 
     private readonly SettingsStore _store;
     private readonly AppLog _log;
+    private readonly string _logPath;
     private readonly SessionManager _sessions;
     private readonly Dictionary<Guid, SessionWindow> _windows = [];
     private readonly Dictionary<Guid, FullScreenWindow> _fullScreens = [];
@@ -27,9 +28,9 @@ internal sealed class MainForm : Form {
     private readonly Button _listStrip;
     private readonly ToolTip _toolTip = new();
     private readonly Font _stripFont;
-    private readonly Button _fullScreenButton;
-    private readonly Button _addButton;
-    private readonly Button _moreButton;
+    private readonly GlyphButton _fullScreenButton;
+    private readonly GlyphButton _addButton;
+    private readonly GlyphButton _moreButton;
     private readonly TableLayoutPanel _bottomBar;
     private readonly WallpaperPanel _leftPanel;
     private readonly List<Button> _iconButtons = [];
@@ -38,13 +39,6 @@ internal sealed class MainForm : Form {
     private readonly ConnectionList _list;
     private readonly ClockPanel _clock;
     private readonly SessionView _mainView;
-    private readonly ContextMenuStrip _connectionMenu;
-    private readonly ToolStripMenuItem _disconnectItem;
-    private readonly ToolStripMenuItem _separateWindowItem;
-    private readonly ToolStripMenuItem _returnItem;
-    private readonly ToolStripMenuItem _fullScreenItem;
-    private readonly ToolStripMenuItem _ctrlAltDelItem;
-    private readonly ContextMenuStrip _moreMenu;
     private HotkeyHook? _hotkeys;
     private Guid? _menuConnectionId;
     private LogForm? _logForm;
@@ -53,9 +47,10 @@ internal sealed class MainForm : Form {
     private bool _windowedMaximized;
     private bool _closing;
 
-    public MainForm(SettingsStore store, AppLog log) {
+    public MainForm(SettingsStore store, AppLog log, string logPath) {
         _store = store;
         _log = log;
+        _logPath = logPath;
         _sessions = new SessionManager(CreateRdpClient, log);
 
         SuspendLayout();
@@ -119,39 +114,6 @@ internal sealed class MainForm : Form {
         Controls.Add(_split);
         Controls.Add(_listStrip);
 
-        _connectionMenu = new ContextMenuStrip();
-        _connectionMenu.Items.Add("Edit...", null, (_, _) => EditConnection(_menuConnectionId));
-        _disconnectItem = new ToolStripMenuItem("Disconnect", null, (_, _) => _sessions.Find(_menuConnectionId ?? Guid.Empty)?.Disconnect());
-        _separateWindowItem = new ToolStripMenuItem("Open in separate window", null, (_, _) => OpenInSeparateWindow(_menuConnectionId));
-        _returnItem = new ToolStripMenuItem(ReturnText, null, (_, _) => ReturnToMain(_menuConnectionId, disconnect: false));
-        _fullScreenItem = new ToolStripMenuItem("Full screen", null, (_, _) => ToggleFullScreen(_menuConnectionId)) {
-            ShortcutKeyDisplayString = "Ctrl+Alt+Break",
-        };
-        _ctrlAltDelItem = new ToolStripMenuItem("Send Ctrl+Alt+Del", null, (_, _) => SendCtrlAltDel(_menuConnectionId));
-        _connectionMenu.Items.AddRange([_disconnectItem, _separateWindowItem, _returnItem, _fullScreenItem, _ctrlAltDelItem, new ToolStripSeparator()]);
-        _connectionMenu.Items.Add("Delete", null, (_, _) => DeleteConnection());
-
-        _moreMenu = new ContextMenuStrip();
-        _moreMenu.Items.Add(new ToolStripMenuItem("Hide list", null, (_, _) => ToggleList()) { ShortcutKeyDisplayString = "Ctrl+Alt+Home" });
-        _moreMenu.Items.Add("Clock time zone...", null, (_, _) => ChooseClockTimeZone());
-        var background = new ToolStripMenuItem("Background");
-        foreach (var name in ListBackground.Names) {
-            background.DropDownItems.Add(new ToolStripMenuItem(name, null, (_, _) => Save(s => s with { Background = name })));
-        }
-        background.DropDownOpening += (_, _) => {
-            var current = ListBackground.Of(_store.Current);
-            foreach (ToolStripMenuItem item in background.DropDownItems) {
-                item.Checked = item.Text == current;
-            }
-        };
-        _moreMenu.Items.Add(background);
-        _moreMenu.Items.Add("Change master password...", null, (_, _) => ChangeMasterPassword());
-        _moreMenu.Items.Add("Log", null, (_, _) => ShowLog());
-        _moreMenu.Items.Add("About RemoteMe", null, (_, _) => {
-            using var about = new AboutForm(_store.Path);
-            about.ShowDialog(this);
-        });
-
         ResumeLayout(false);
 
         _sessions.SessionChanged += (_, id) => OnSessionChanged(id);
@@ -159,13 +121,7 @@ internal sealed class MainForm : Form {
         _addButton.Click += (_, _) => AddConnection();
         _clock.Click += (_, _) => ChooseClockTimeZone();
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
-        _moreButton.Click += (_, _) => {
-            if (_list.Compact) {
-                _moreMenu.Show(_moreButton, new Point(_moreButton.Width, _moreButton.Height), ToolStripDropDownDirection.AboveRight);
-            } else {
-                _moreMenu.Show(_moreButton, new Point(_moreButton.Width, 0), ToolStripDropDownDirection.AboveLeft);
-            }
-        };
+        _moreButton.Click += (_, _) => ShowMoreMenu();
         _listStrip.Click += (_, _) => ToggleList();
         _list.ConnectionSelected += (_, e) => ShowConnection(e.Connection);
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
@@ -651,9 +607,9 @@ internal sealed class MainForm : Form {
 
     // The buttons have no margins and the bar no padding, so a hovered button is filled up to the edges
     // like the clock and the rows of the list (decided on 2026-11-19).
-    private Button CreateIconButton(string glyph, string name) {
-        var button = new Button {
-            Text = glyph,
+    private GlyphButton CreateIconButton(string glyph, string name) {
+        var button = new GlyphButton {
+            Glyph = glyph,
             Font = _glyphFont,
             Size = new Size(40, 40),
             Margin = Padding.Empty,
@@ -678,7 +634,7 @@ internal sealed class MainForm : Form {
 
     private void ShowMainFullScreenState() {
         var name = _mainFullScreen ? "Back to a window" : "Full screen with the list";
-        _fullScreenButton.Text = _mainFullScreen ? WindowGlyph : FullScreenGlyph;
+        _fullScreenButton.Glyph = _mainFullScreen ? WindowGlyph : FullScreenGlyph;
         _fullScreenButton.AccessibleName = name;
         _toolTip.SetToolTip(_fullScreenButton, name);
     }
@@ -734,14 +690,48 @@ internal sealed class MainForm : Form {
     private void ShowConnectionMenu(Guid id, Point screenLocation) {
         _menuConnectionId = id;
         var session = _sessions.Find(id);
-        _disconnectItem.Enabled = session?.IsActive == true;
-        _separateWindowItem.Enabled = session is not null && !IsAway(id);
-        _returnItem.Enabled = _windows.ContainsKey(id);
-        _fullScreenItem.Enabled = session?.State is SessionState.Connected or SessionState.Reconnecting;
+        var menu = new NativeMenu()
+            .Add("Edit...", () => EditConnection(id))
+            .Add("Disconnect", () => _sessions.Find(id)?.Disconnect(), enabled: session?.IsActive == true)
+            .Add("Open in separate window", () => OpenInSeparateWindow(id), enabled: session is not null && !IsAway(id))
+            .Add(ReturnText, () => ReturnToMain(id, disconnect: false), enabled: _windows.ContainsKey(id))
+            .Add("Full screen", () => ToggleFullScreen(id), enabled: session?.State is SessionState.Connected or SessionState.Reconnecting,
+                shortcut: "Ctrl+Alt+Break");
         // Only a VM's console needs it: the guest's sign-in screen waits for Ctrl+Alt+Del.
-        _ctrlAltDelItem.Visible = FindConnection(id) is { Kind: ConnectionKind.HyperV, BasicSession: true };
-        _ctrlAltDelItem.Enabled = session?.State == SessionState.Connected;
-        _connectionMenu.Show(screenLocation);
+        if (FindConnection(id) is { Kind: ConnectionKind.HyperV, BasicSession: true }) {
+            menu.Add("Send Ctrl+Alt+Del", () => SendCtrlAltDel(id), enabled: session?.State == SessionState.Connected);
+        }
+        menu.AddSeparator()
+            .Add("Delete", () => {
+                _menuConnectionId = id;
+                DeleteConnection();
+            });
+        menu.Show(this, screenLocation);
+    }
+
+    // Above the button: to its left in the full list, to its right in the compact strip.
+    private void ShowMoreMenu() {
+        var current = ListBackground.Of(_store.Current);
+        var background = new NativeMenu();
+        foreach (var name in ListBackground.Names) {
+            background.Add(name, () => Save(s => s with { Background = name }), isChecked: name == current);
+        }
+        var menu = new NativeMenu()
+            .Add("Hide list", ToggleList, shortcut: "Ctrl+Alt+Home")
+            .Add("Clock time zone...", ChooseClockTimeZone)
+            .AddSubmenu("Background", background)
+            .Add("Change master password...", ChangeMasterPassword)
+            .Add("Log", ShowLog)
+            .Add("About RemoteMe", () => {
+                using var about = new AboutForm(_store.Path, _logPath);
+                about.ShowDialog(this);
+            });
+        var button = _moreButton.RectangleToScreen(_moreButton.ClientRectangle);
+        if (_list.Compact) {
+            menu.Show(this, new Point(button.Right, button.Bottom), NativeMethods.TpmLeftAlign | NativeMethods.TpmBottomAlign, button);
+        } else {
+            menu.Show(this, new Point(button.Right, button.Top), NativeMethods.TpmRightAlign | NativeMethods.TpmBottomAlign, button);
+        }
     }
 
     private void SendCtrlAltDel(Guid? connectionId) {
@@ -813,7 +803,7 @@ internal sealed class MainForm : Form {
 
     private void ShowLog() {
         if (_logForm is null || _logForm.IsDisposed) {
-            _logForm = new LogForm(_log);
+            _logForm = new LogForm(_log, _logPath);
             _logForm.Show(this);
         } else {
             _logForm.Activate();

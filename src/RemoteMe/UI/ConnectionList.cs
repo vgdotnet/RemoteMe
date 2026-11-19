@@ -53,11 +53,13 @@ internal sealed class ConnectionList : ScrollableControl {
     public ConnectionList() {
         SetStyle(
             ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint
-                | ControlStyles.ResizeRedraw | ControlStyles.Selectable,
+                | ControlStyles.ResizeRedraw | ControlStyles.Selectable | ControlStyles.SupportsTransparentBackColor,
             true);
         AutoScroll = true;
         TabStop = true;
-        BackColor = SystemColors.Window;
+        // The rows of the full list stay white and the wallpaper of the panel shows only below the last
+        // one; in the compact strip it shows behind the circles too (decided on 2026-11-19).
+        BackColor = Color.Transparent;
         AccessibleName = "Connections";
         UpdateMetrics();
     }
@@ -154,6 +156,10 @@ internal sealed class ConnectionList : ScrollableControl {
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             }
             return;
+        }
+        if (!_compact) {
+            using var white = new SolidBrush(SystemColors.Window);
+            graphics.FillRectangle(white, 0, AutoScrollPosition.Y, ClientSize.Width, _contentHeight);
         }
         for (var i = 0; i < _rows.Count; i++) {
             var bounds = RowBounds(i);
@@ -543,7 +549,7 @@ internal sealed class ConnectionList : ScrollableControl {
         }
         if (Focused && index == _focusIndex) {
             ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(bounds, -1, -1), foreground,
-                active ? SystemColors.Highlight : hover ? Palette.Hover : BackColor);
+                active ? SystemColors.Highlight : hover ? Palette.Hover : SystemColors.Window);
         }
     }
 

@@ -31,6 +31,7 @@ internal sealed class MainForm : Form {
     private readonly Button _addButton;
     private readonly Button _moreButton;
     private readonly TableLayoutPanel _bottomBar;
+    private readonly WallpaperPanel _leftPanel;
     private readonly List<Button> _iconButtons = [];
     private readonly Panel _bottomLine;
     private readonly Font _glyphFont;
@@ -78,7 +79,7 @@ internal sealed class MainForm : Form {
             ColumnCount = 4,
             RowCount = 1,
             Padding = Padding.Empty,
-            BackColor = SystemColors.Window,
+            BackColor = Color.Transparent,
         };
         _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         _bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -93,10 +94,12 @@ internal sealed class MainForm : Form {
 
         _mainView = new SessionView();
         _split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
-        _split.Panel1.Controls.Add(_list);
-        _split.Panel1.Controls.Add(_bottomLine);
-        _split.Panel1.Controls.Add(_clock);
-        _split.Panel1.Controls.Add(_bottomBar);
+        _leftPanel = new WallpaperPanel { Dock = DockStyle.Fill };
+        _leftPanel.Controls.Add(_list);
+        _leftPanel.Controls.Add(_bottomLine);
+        _leftPanel.Controls.Add(_clock);
+        _leftPanel.Controls.Add(_bottomBar);
+        _split.Panel1.Controls.Add(_leftPanel);
         _split.Panel2.Controls.Add(_mainView);
         _listStrip = new Button {
             Dock = DockStyle.Left,
@@ -131,6 +134,17 @@ internal sealed class MainForm : Form {
         _moreMenu = new ContextMenuStrip();
         _moreMenu.Items.Add(new ToolStripMenuItem("Hide list", null, (_, _) => ToggleList()) { ShortcutKeyDisplayString = "Ctrl+Alt+Home" });
         _moreMenu.Items.Add("Clock time zone...", null, (_, _) => ChooseClockTimeZone());
+        var background = new ToolStripMenuItem("Background");
+        foreach (var name in ListBackground.Names) {
+            background.DropDownItems.Add(new ToolStripMenuItem(name, null, (_, _) => Save(s => s with { Background = name })));
+        }
+        background.DropDownOpening += (_, _) => {
+            var current = ListBackground.Of(_store.Current);
+            foreach (ToolStripMenuItem item in background.DropDownItems) {
+                item.Checked = item.Text == current;
+            }
+        };
+        _moreMenu.Items.Add(background);
         _moreMenu.Items.Add("Change master password...", null, (_, _) => ChangeMasterPassword());
         _moreMenu.Items.Add("Log", null, (_, _) => ShowLog());
 
@@ -258,6 +272,7 @@ internal sealed class MainForm : Form {
         }
         _sessions.CloseMissing(ids);
         _list.ShowSettings(_store.Current);
+        ApplyBackground();
         _clock.ZoneId = _store.Current.ClockTimeZone;
         _toolTip.SetToolTip(_clock, $"{_clock.ZoneName}\nClick to change the time zone.");
         if (FindConnection(_list.ActiveConnectionId) is null) {
@@ -542,6 +557,15 @@ internal sealed class MainForm : Form {
         (_windows.GetValueOrDefault(connectionId) as Form ?? this).Activate();
     }
 
+    // The doodle background of the left panel, chosen in the "..." menu; the session area stays plain
+    // gray (both decided on 2026-11-19).
+    private void ApplyBackground() {
+        var theme = Wallpaper.Theme(ListBackground.Of(_store.Current));
+        if (theme != _leftPanel.Theme) {
+            _leftPanel.Theme = theme;
+        }
+    }
+
     private void ToggleList() {
         _split.Panel1Collapsed = !_split.Panel1Collapsed;
         _listStrip.Visible = _split.Panel1Collapsed;
@@ -630,7 +654,7 @@ internal sealed class MainForm : Form {
             Size = new Size(40, 40),
             Margin = Padding.Empty,
             FlatStyle = FlatStyle.Flat,
-            BackColor = SystemColors.Window,
+            BackColor = Color.Transparent,
             ForeColor = SystemColors.ControlText,
             AccessibleName = name,
         };

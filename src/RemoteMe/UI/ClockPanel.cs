@@ -29,10 +29,11 @@ internal sealed class ClockPanel : Control {
     public ClockPanel() {
         SetStyle(
             ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint
-                | ControlStyles.ResizeRedraw | ControlStyles.Selectable,
+                | ControlStyles.ResizeRedraw | ControlStyles.Selectable | ControlStyles.SupportsTransparentBackColor,
             true);
         TabStop = true;
-        BackColor = SystemColors.Window;
+        // The wallpaper of the panel shows under the clock; hover and press fill it.
+        BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
         AccessibleRole = AccessibleRole.PushButton;
         _timer.Tick += (_, _) => ShowTime();
@@ -86,17 +87,23 @@ internal sealed class ClockPanel : Control {
         UpdateMetrics();
     }
 
+    // The clock stands on the doodles: its text has a white glow, and the date and the city are nearly
+    // black instead of gray (decided on 2026-11-19, option 5 of five mockups).
     protected override void OnPaint(PaintEventArgs e) {
         var graphics = e.Graphics;
-        graphics.Clear(_pressed ? Palette.Pressed : _hover ? Palette.Hover : BackColor);
+        if (_pressed || _hover) {
+            using var fill = new SolidBrush(_pressed ? Palette.Pressed : Palette.Hover);
+            graphics.FillRectangle(fill, ClientRectangle);
+        }
         var (date, time, place) = Lines();
+        var secondary = Palette.Blend(SystemColors.GrayText, SystemColors.ControlText, 0.75);
 
         var top = _padding;
-        DrawLine(graphics, date, Font, _textInk, _lineHeight, top, SystemColors.GrayText);
+        DrawLine(graphics, date, Font, _textInk, _lineHeight, top, secondary);
         top += _textInk.Height + _gap;
         DrawLine(graphics, time, _timeFont ?? Font, _timeInk, _timeHeight, top, ForeColor);
         top += _timeInk.Height + _gap;
-        DrawLine(graphics, place, Font, _textInk, _lineHeight, top, SystemColors.GrayText);
+        DrawLine(graphics, place, Font, _textInk, _lineHeight, top, secondary);
 
         if (Focused && ShowFocusCues) {
             ControlPaint.DrawFocusRectangle(graphics, Rectangle.Inflate(ClientRectangle, -2, -2));
@@ -201,6 +208,17 @@ internal sealed class ClockPanel : Control {
     // gaps between the date, the time and the city look the same.
     private void DrawLine(Graphics graphics, string text, Font font, (int Top, int Height) ink, int height, int inkTop, Color color) {
         var bounds = new Rectangle(_padding, inkTop - ink.Top, ClientSize.Width - _padding * 2, height);
+        // The glow is the text drawn in white a pixel or two to every side; a hovered clock has a plain fill.
+        if (!_hover && !_pressed) {
+            var radius = LogicalToDeviceUnits(2);
+            for (var dx = -radius; dx <= radius; dx++) {
+                for (var dy = -radius; dy <= radius; dy++) {
+                    if ((dx != 0 || dy != 0) && dx * dx + dy * dy <= radius * radius + 1) {
+                        TextRenderer.DrawText(graphics, text, font, bounds with { X = bounds.X + dx, Y = bounds.Y + dy }, SystemColors.Window, TextFlags | TextFormatFlags.EndEllipsis);
+                    }
+                }
+            }
+        }
         TextRenderer.DrawText(graphics, text, font, bounds, color, TextFlags | TextFormatFlags.EndEllipsis);
     }
 

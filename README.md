@@ -114,7 +114,7 @@ Decisions made on 2026-11-12 and 2026-11-13.
   menu. At the bottom, under a thin line, are flat buttons with icons and tooltips instead of captions
   (decided on 2026-11-17): "Add connection" (a plus) on the left; on the right the full-screen button
   (see the session area) and "More commands" (three dots), whose menu holds "Change master password"
-  and "Log" (decided on 2026-11-13). The buttons have no margins, so a hovered button is filled up to
+  and "Log" (decided on 2026-11-13), and also "Hide list", "Clock time zone..." and "Background". The buttons have no margins, so a hovered button is filled up to
   the edges, like the clock and the rows (decided on 2026-11-19).
 - **Clock above the list buttons** (decided on 2026-11-17, option B of four mockups). Between the thin
   line and the buttons: the date, under it the time of the chosen time zone in large digits, without
@@ -156,6 +156,14 @@ Decisions made on 2026-11-12 and 2026-11-13.
   selected: the session area shows its state ("Not connected.", "Disconnected." or the reason) with a
   "Connect" or "Reconnect" button. A double click or Enter on the row connects it (decided on
   2026-11-18).
+- **Doodle background of the left panel** (decided on 2026-11-19). Below the connection rows (the rows
+  themselves stay white; in the compact strip the doodles go behind the circles too), behind the
+  clock and the list buttons: a soft gradient with a light pattern of small doodles (monitors, clouds,
+  coffee cups, rockets, cats and the like) that the application draws itself. It comes in six colors -
+  Green (the default), Blue, Peach, Lavender, Mint and Sand - chosen with "Background" in the "..."
+  menu and kept in the settings file. The session area stays plain gray. The clock stands on the
+  doodles with a white glow around its text, and its date and city are nearly black (option 5 of five
+  mockups).
 - **No bottom notification bar.** The disconnect reason and the connection progress are shown in the
   session area (with a "Reconnect" button). Settings file errors are shown in a message box. A log of
   all messages is kept in memory and opens in a separate window on demand; it is not written to disk.

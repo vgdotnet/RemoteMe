@@ -75,6 +75,16 @@ public sealed class SettingsStoreTests : IDisposable {
     }
 
     [Fact]
+    public void Apply_KeepsTheBackgroundForTheNextOpen() {
+        using (var store = SettingsStore.Create(FilePath, Password, FastPolicy)) {
+            store.Apply(s => s with { Background = "Lavender" });
+        }
+
+        using var reopened = SettingsStore.Open(FilePath, Password, FastPolicy);
+        Assert.Equal("Lavender", reopened.Current.Background);
+    }
+
+    [Fact]
     public void Apply_KeepsCollapsedGroupsForTheNextOpen() {
         using (var store = SettingsStore.Create(FilePath, Password, FastPolicy)) {
             store.Apply(s => SettingsEditor.AddConnection(s, SampleData.Connection("Alpha", "Lab")));

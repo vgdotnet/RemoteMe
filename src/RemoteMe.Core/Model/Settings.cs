@@ -20,4 +20,8 @@ public sealed record Settings {
     // The time zone of the clock above the list buttons, as a TimeZoneInfo id; null is the local time of
     // Windows. Left out of the file while null, so files without it open with the local time.
     public string? ClockTimeZone { get; init; }
+
+    // The color of the doodle background of the left panel, one of ListBackground.Names; null, or a name
+    // this version does not know, is the first one. Left out of the file while null.
+    public string? Background { get; init; }
 }

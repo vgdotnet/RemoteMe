@@ -10,3 +10,13 @@ and the session itself.
 - A session can be moved to a separate window or shown full screen on any monitor.
 - A virtual machine on the Hyper-V host of this computer opens directly, without network access inside
   the VM.
+
+![The main window with the connection list](docs/screenshots/main-window.png)
+
+The list can be narrowed to a strip of circles:
+
+![The connection list as a compact strip](docs/screenshots/compact-strip.png)
+
+A connection to a VM on the Hyper-V host of this computer:
+
+![The form of a Hyper-V connection](docs/screenshots/hyper-v-connection.png)

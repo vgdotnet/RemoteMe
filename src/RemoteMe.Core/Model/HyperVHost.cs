@@ -4,7 +4,7 @@ using System.Net.NetworkInformation;
 namespace RemoteMe.Core.Model;
 
 // A Hyper-V host is signed in to with the current Windows account, so only this computer is accepted as
-// one (requirement 14): any other name would get that account's sign-in.
+// one: any other name would get that account's sign-in.
 public static class HyperVHost {
     public const string Requirement = "The Hyper-V host must be this computer: localhost, its name or one of its addresses.";
 

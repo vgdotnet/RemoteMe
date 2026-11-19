@@ -47,8 +47,8 @@ jobs:
             throw "The publish folder must hold only RemoteMe.exe, found: $($files.Name -join ', ')"
           }
 
-      # Signing runs only when the SignPath repository variables are set (README, "Code signing policy");
-      # without them releases are not signed.
+      # Signing runs only when the SignPath repository variables are set; without them releases are not
+      # signed.
       - name: Upload the exe for signing
         id: unsigned
         if: vars.SIGNPATH_ORGANIZATION_ID != ''
@@ -104,7 +104,6 @@ jobs:
             "RemoteMe $env:VERSION for Windows 10 22H2 and Windows 11, x64: one portable exe."
             ''
             $signing
-            "Code signing policy: https://github.com/$env:GITHUB_REPOSITORY#code-signing-policy"
             ''
             "SHA-256 of RemoteMe.exe: $hash"
           ) -join "`n"

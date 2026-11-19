@@ -73,7 +73,7 @@ internal sealed class RdpClientControl : AxHost, IRdpClient {
         advanced.EnableCredSspSupport = true;
         advanced.AuthenticationLevel = WarnIfServerAuthenticationFails;
         // Every property is set each time, since the control is reused when a connection is edited.
-        // The Hyper-V values are the ones the stage 1 probe connected with (see the README).
+        // The Hyper-V values are the ones the stage 1 probe connected with.
         advanced.RDPPort = hyperV is null ? RdpPort : HyperVPort;
         advanced.PCB = hyperV is null ? "" : hyperV.VmId.ToString() + (hyperV.EnhancedSession ? ";EnhancedMode=1" : "");
         advanced.AuthenticationServiceClass = hyperV is null ? RdpServiceClass : HyperVServiceClass;

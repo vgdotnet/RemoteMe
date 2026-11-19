@@ -1,7 +1,7 @@
 # Prototypes
 
-Throwaway tools for the "To verify during implementation" list in the [README](../README.md). They are
-not part of `RemoteMe.slnx` and are never published. Build and run each project directly.
+Throwaway tools that checked how the RDP component behaves before RemoteMe was written. They are not
+part of `RemoteMe.slnx` and are never published. Build and run each project directly.
 
 ## TypeLibDump
 

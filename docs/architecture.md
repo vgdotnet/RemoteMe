@@ -1,7 +1,6 @@
 # RemoteMe architecture
 
-Design as of 2026-11-17. Requirements and interface decisions are in the
-[README](../README.md); this document describes how the application is split into parts.
+Design as of 2026-11-17. This document describes how the application is split into parts.
 
 ## Components
 
@@ -109,13 +108,13 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | Risk | What to do |
 |---|---|
 | The RDP component may not survive a move between windows | Checked in stage 1: it survives a move with the WinForms `Parent` property, no reconnect |
-| The component captures keys inside the session | Its input window runs on its own thread, so the message loop never sees session keys; hotkeys need a low-level keyboard hook (remaining checks in the README) |
+| The component captures keys inside the session | Its input window runs on its own thread, so the message loop never sees session keys; hotkeys need a low-level keyboard hook |
 | All sessions run on one UI thread (an ActiveX requirement) | Accept for the first version; if it becomes a problem, one process per session |
 | A series of resize events | Send only the final size; the width must be even, from 200 to 8192 |
 | Scale change on the fly inside the guest Windows | Checked in stage 1: `UpdateSessionDisplaySettings` applies a new scale without a reconnect |
 | Single-file may extract libraries to a temporary folder | Checked in stages 0 and 7: nothing is extracted |
 | The settings file is edited on two machines | Single instance, atomic write, a version counter inside the file |
-| Direct Hyper-V connection | The stage 1 probe found the settings for the local host with the current Windows account; the guest's password stays in a Windows dialog, a remote host is out of scope (README, requirement 14) |
+| Direct Hyper-V connection | The stage 1 probe found the settings for the local host with the current Windows account; the guest's password stays in a Windows dialog, a remote host is out of scope |
 
 ## Security risks
 
@@ -124,10 +123,10 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | Master password guessing on a copied file | Expensive key derivation, a warning for a password shorter than 12 characters (no hard minimum, by the owner's decision), parameters in the header so they can be raised later |
 | A replaced or rolled back file (for example, a lowered iteration count) | The header is part of the data authenticated by AES-GCM; limits on accepted parameters |
 | Passwords in process memory (.NET strings cannot be zeroed, dumps, page file) | Keep connection passwords encrypted and decrypt them only at connect time; zero the buffers; never write secrets to the log or to error messages |
-| An unlocked application left unattended | Accepted: there is no auto-lock (requirement 10) |
-| Untrusted server certificate, man-in-the-middle attack | NLA (CredSSP) is offered and used whenever the server supports it, but not required: a server without it can choose TLS, and the password then goes inside TLS, as with mstsc's defaults. The component warns when it cannot verify the server, and Windows remembers the consent on each machine (requirement 12) |
-| The current Windows account signing in to another computer's Hyper-V host | Only this computer is accepted as the host: `localhost`, a loopback address, its name or one of its addresses. The connection form refuses another host, and a VM connection whose host is another computer (in a settings file shared with another machine) is not started (requirement 14) |
-| RDP bitmap cache on disk and traces in the registry | Turn off the persistent cache; describe the registry traces in the README |
-| Clipboard and drives shared between sessions of different clients | Redirection is set per connection, drives are off by default (requirement 13) |
+| An unlocked application left unattended | Accepted: there is no auto-lock |
+| Untrusted server certificate, man-in-the-middle attack | NLA (CredSSP) is offered and used whenever the server supports it, but not required: a server without it can choose TLS, and the password then goes inside TLS, as with mstsc's defaults. The component warns when it cannot verify the server, and Windows remembers the consent on each machine |
+| The current Windows account signing in to another computer's Hyper-V host | Only this computer is accepted as the host: `localhost`, a loopback address, its name or one of its addresses. The connection form refuses another host, and a VM connection whose host is another computer (in a settings file shared with another machine) is not started |
+| RDP bitmap cache on disk and traces in the registry | Turn off the persistent cache; the server certificate thumbprints the component keeps in the registry, shared with mstsc, stay |
+| Clipboard and drives shared between sessions of different clients | Redirection is set per connection, drives are off by default |
 | A replaced unsigned exe in a synced folder | A SHA-256 checksum with every release; releases are not signed (decided on 2026-11-17, after SignPath Foundation declined the application; the project can apply again later) |
 | Public repository | No real addresses or user names in tests and screenshots |

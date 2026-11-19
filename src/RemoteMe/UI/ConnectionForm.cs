@@ -171,6 +171,7 @@ internal sealed class ConnectionForm : Form {
         Guid? vmId = Guid.TryParse(_vmId.Text.Trim(), out var parsed) ? parsed : null;
         var valid = Require(_name, _name.Text.Trim().Length > 0, "Enter a name.")
             && Require(_address, _address.Text.Trim().Length > 0, _hyperV.Checked ? "Enter the Hyper-V host." : "Enter the computer's name or address.")
+            && (!_hyperV.Checked || Require(_address, HyperVHost.IsThisComputer(_address.Text), HyperVHost.Requirement))
             && (!_hyperV.Checked || Require(_vmId, vmId is not null, "Enter the VM ID, a GUID such as 1b4e28ba-2fa1-11d2-883f-0016d3cca427."));
         if (!valid) {
             return;

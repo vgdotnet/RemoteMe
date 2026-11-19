@@ -58,12 +58,20 @@ public sealed class SettingsVault : IDisposable {
         if (header.Iterations < policy.MinIterations || header.Iterations > policy.MaxIterations) {
             throw new VaultException(VaultError.ParametersOutOfRange);
         }
-        var key = VaultKey.Derive(password, header.Iterations, header.Salt);
+        var format1 = header.Version == VaultHeader.Format1;
+        var key = format1
+            ? VaultKey.DeriveFormat1(password, header.Iterations, header.Salt)
+            : VaultKey.Derive(password, header.Iterations, header.Salt);
         try {
             if (!key.Matches(header.KeyCheck)) {
                 throw new VaultException(VaultError.WrongPassword);
             }
             settings = Decrypt(file, header, key);
+            if (format1) {
+                var upgraded = key.UpgradeFormat1(header.Iterations, header.Salt);
+                key.Dispose();
+                key = upgraded;
+            }
             return new SettingsVault(path, policy, key, header.Iterations, header.Salt, header.Revision, SHA256.HashData(file));
         } catch {
             key.Dispose();

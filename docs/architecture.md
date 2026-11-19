@@ -40,11 +40,14 @@ windows. COM lives only in the RDP wrapper. Cryptography and file access live on
 ## Data flows
 
 1. **Unlock.** The unlock window passes the password to the vault. The vault reads the file header
-   (version, salt, iteration count, key check, revision, nonce), derives 64 bytes with PBKDF2, compares
-   the key check, decrypts with AES-GCM, parses the JSON and gives the connection model to the main
-   window. The key check (an HMAC made with the second half of the derived bytes) tells a wrong
-   password apart from a damaged file; the AES-GCM tag, which also covers the header, catches damage
-   and tampering. The layout is described in `src/RemoteMe.Core/Vault/VaultHeader.cs`.
+   (version, salt, iteration count, key check, revision, nonce), derives 32 bytes with PBKDF2 and splits
+   them with HKDF into the encryption key and the key-check key, compares the key check, decrypts with
+   AES-GCM, parses the JSON and gives the connection model to the main window. The key check (an HMAC
+   made with the key-check key) tells a wrong password apart from a damaged file; the AES-GCM tag, which
+   also covers the header, catches damage and tampering. An unlock costs exactly what one password guess
+   costs. A file in format 1 (up to v0.8.1: 64 bytes from PBKDF2, two blocks of full cost, the first the
+   encryption key and the second the key-check key) is still read, and the next save writes it in
+   format 2. The layout is described in `src/RemoteMe.Core/Vault/VaultHeader.cs`.
 2. **Save.** Every change in the UI goes through `SettingsStore.Apply` and is saved at once. Check that
    the file on disk is still the one the vault read or wrote last; otherwise a conflict is reported,
    nothing is written, and the UI asks whether to read the file again or overwrite it. Then model to
@@ -96,8 +99,8 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 
 - .NET 10 (LTS), C# 14, nullable enabled, warnings as errors.
 - `ApplicationHighDpiMode = PerMonitorV2` in the project file.
-- `Rfc2898DeriveBytes.Pbkdf2` (SHA-256, at least 600,000 iterations as OWASP recommends), `AesGcm`,
-  `CryptographicOperations.ZeroMemory`.
+- `Rfc2898DeriveBytes.Pbkdf2` (SHA-256, at least 600,000 iterations as OWASP recommends), `HKDF`,
+  `AesGcm`, `CryptographicOperations.ZeroMemory`.
 - No trimming and no Native AOT: WinForms and built-in COM interop are not compatible with them.
 - No third-party packages in the application itself.
 
@@ -122,7 +125,8 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | A replaced or rolled back file (for example, a lowered iteration count) | The header is part of the data authenticated by AES-GCM; limits on accepted parameters |
 | Passwords in process memory (.NET strings cannot be zeroed, dumps, page file) | Keep connection passwords encrypted and decrypt them only at connect time; zero the buffers; never write secrets to the log or to error messages |
 | An unlocked application left unattended | Accepted: there is no auto-lock (requirement 10) |
-| Untrusted server certificate, man-in-the-middle attack | Require NLA; the component warns on the first connection and Windows remembers the consent on each machine (requirement 12) |
+| Untrusted server certificate, man-in-the-middle attack | NLA (CredSSP) is offered and used whenever the server supports it, but not required: a server without it can choose TLS, and the password then goes inside TLS, as with mstsc's defaults. The component warns when it cannot verify the server, and Windows remembers the consent on each machine (requirement 12) |
+| The current Windows account signing in to another computer's Hyper-V host | Only this computer is accepted as the host: `localhost`, a loopback address, its name or one of its addresses. The connection form refuses another host, and a VM connection whose host is another computer (in a settings file shared with another machine) is not started (requirement 14) |
 | RDP bitmap cache on disk and traces in the registry | Turn off the persistent cache; describe the registry traces in the README |
 | Clipboard and drives shared between sessions of different clients | Redirection is set per connection, drives are off by default (requirement 13) |
 | A replaced unsigned exe in a synced folder | A SHA-256 checksum with every release; releases are not signed (decided on 2026-11-17, after SignPath Foundation declined the application; the project can apply again later) |

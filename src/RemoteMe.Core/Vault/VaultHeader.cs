@@ -8,7 +8,9 @@ namespace RemoteMe.Core.Vault;
 //   10  KDF id (1)                80  revision (8)
 //   11  reserved, zero (1)        88  nonce (12)
 //   12  PBKDF2 iterations (4)    100  ciphertext, then the AES-GCM tag (16)
-// AES-GCM authenticates the whole header; bytes 0-47 also feed the key check.
+// AES-GCM authenticates the whole header; bytes 0-47 also feed the key check. Format 2 has KDF id 2
+// (VaultKey.Derive). Format 1 has KDF id 1 (VaultKey.DeriveFormat1); it is still read, and the next save
+// writes the file as format 2.
 internal sealed class VaultHeader {
     public const int Size = 100;
     public const int KdfPartSize = 48;
@@ -16,8 +18,12 @@ internal sealed class VaultHeader {
     public const int KeyCheckSize = 32;
     public const int NonceSize = 12;
     public const int TagSize = 16;
-    public const ushort FormatVersion = 1;
+    public const ushort FormatVersion = 2;
+    public const ushort Format1 = 1;
     public const byte KdfPbkdf2Sha256 = 1;
+    public const byte KdfPbkdf2Sha256Hkdf = 2;
+
+    public ushort Version { get; init; } = FormatVersion;
 
     public required uint Iterations { get; init; }
 
@@ -31,11 +37,11 @@ internal sealed class VaultHeader {
 
     private static ReadOnlySpan<byte> Magic => "RemoteMe"u8;
 
-    public static byte[] BuildKdfPart(uint iterations, ReadOnlySpan<byte> salt) {
+    public static byte[] BuildKdfPart(ushort version, uint iterations, ReadOnlySpan<byte> salt) {
         var part = new byte[KdfPartSize];
         Magic.CopyTo(part);
-        BinaryPrimitives.WriteUInt16LittleEndian(part.AsSpan(8), FormatVersion);
-        part[10] = KdfPbkdf2Sha256;
+        BinaryPrimitives.WriteUInt16LittleEndian(part.AsSpan(8), version);
+        part[10] = KdfId(version);
         BinaryPrimitives.WriteUInt32LittleEndian(part.AsSpan(12), iterations);
         salt.CopyTo(part.AsSpan(16));
         return part;
@@ -49,10 +55,11 @@ internal sealed class VaultHeader {
         if (version > FormatVersion) {
             throw new VaultException(VaultError.UnsupportedVersion);
         }
-        if (version != FormatVersion || file[10] != KdfPbkdf2Sha256 || file[11] != 0) {
+        if (version < Format1 || file[10] != KdfId(version) || file[11] != 0) {
             throw new VaultException(VaultError.InvalidFormat);
         }
         return new VaultHeader {
+            Version = version,
             Iterations = BinaryPrimitives.ReadUInt32LittleEndian(file[12..]),
             Salt = file.Slice(16, SaltSize).ToArray(),
             KeyCheck = file.Slice(48, KeyCheckSize).ToArray(),
@@ -62,9 +69,11 @@ internal sealed class VaultHeader {
     }
 
     public void WriteTo(Span<byte> destination) {
-        BuildKdfPart(Iterations, Salt).CopyTo(destination);
+        BuildKdfPart(Version, Iterations, Salt).CopyTo(destination);
         KeyCheck.CopyTo(destination[48..]);
         BinaryPrimitives.WriteUInt64LittleEndian(destination[80..], Revision);
         Nonce.CopyTo(destination[88..]);
     }
+
+    private static byte KdfId(ushort version) => version == Format1 ? KdfPbkdf2Sha256 : KdfPbkdf2Sha256Hkdf;
 }

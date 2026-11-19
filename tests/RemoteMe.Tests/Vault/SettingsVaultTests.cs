@@ -115,9 +115,65 @@ public sealed class SettingsVaultTests : IDisposable {
     [Fact]
     public void Open_WithNewerFormatVersion_ReportsUnsupportedVersion() {
         CreateFile();
-        Tamper(file => file[8] = 2);
+        Tamper(file => file[8] = VaultHeader.FormatVersion + 1);
 
         AssertOpenFails(VaultError.UnsupportedVersion);
+    }
+
+    [Fact]
+    public void Create_WritesTheCurrentFormat() {
+        CreateFile();
+
+        var file = File.ReadAllBytes(FilePath);
+
+        Assert.Equal(VaultHeader.FormatVersion, BitConverter.ToUInt16(file, 8));
+        Assert.Equal(VaultHeader.KdfPbkdf2Sha256Hkdf, file[10]);
+    }
+
+    [Fact]
+    public void Open_WithTheKdfOfAnotherFormat_ReportsInvalidFormat() {
+        CreateFile();
+        Tamper(file => file[10] = VaultHeader.KdfPbkdf2Sha256);
+
+        AssertOpenFails(VaultError.InvalidFormat);
+    }
+
+    [Fact]
+    public void Open_Format1File_ReturnsItsSettings() {
+        File.WriteAllBytes(FilePath, Format1File.Bytes);
+
+        using var vault = SettingsVault.Open(FilePath, Format1File.Password, FastPolicy, out var loaded);
+
+        var connection = Assert.Single(loaded.Connections);
+        Assert.Equal("Format 1", connection.Name);
+        Assert.Equal("format1.example.test", connection.Address);
+        Assert.Equal("format 1 p@ss ✓", connection.Password?.Reveal());
+        Assert.Equal(1UL, vault.Revision);
+        Assert.True(vault.IsCurrentPassword(Format1File.Password));
+        Assert.False(vault.IsCurrentPassword(Format1File.Password + "!"));
+    }
+
+    [Fact]
+    public void Open_Format1FileWithWrongPassword_ReportsWrongPassword() {
+        File.WriteAllBytes(FilePath, Format1File.Bytes);
+
+        AssertOpenFails(VaultError.WrongPassword, Format1File.Password + "!");
+    }
+
+    [Fact]
+    public void Save_AfterOpeningAFormat1File_WritesTheCurrentFormat() {
+        File.WriteAllBytes(FilePath, Format1File.Bytes);
+        using (var vault = SettingsVault.Open(FilePath, Format1File.Password, FastPolicy, out var settings)) {
+            vault.Save(settings);
+        }
+
+        var file = File.ReadAllBytes(FilePath);
+        Assert.Equal(VaultHeader.FormatVersion, BitConverter.ToUInt16(file, 8));
+        Assert.Equal(VaultHeader.KdfPbkdf2Sha256Hkdf, file[10]);
+        using var reopened = SettingsVault.Open(FilePath, Format1File.Password, FastPolicy, out var loaded);
+        Assert.Equal(2UL, reopened.Revision);
+        Assert.Equal("format 1 p@ss ✓", Assert.Single(loaded.Connections).Password?.Reveal());
+        AssertOpenFails(VaultError.WrongPassword, Format1File.Password + "!");
     }
 
     [Fact]

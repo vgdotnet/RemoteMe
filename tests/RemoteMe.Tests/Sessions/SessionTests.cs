@@ -148,13 +148,25 @@ public sealed class SessionTests {
 
     [Fact]
     public void Connect_ToAHyperVMachineConsole_AsksForABasicSession() {
-        var vm = _connection with { Kind = ConnectionKind.HyperV, VmId = SampleData.VmId, BasicSession = true };
+        var vm = _connection with { Kind = ConnectionKind.HyperV, Address = "localhost", VmId = SampleData.VmId, BasicSession = true };
         var session = _manager.GetOrCreate(vm);
 
         session.Connect(vm);
 
         var request = Assert.Single(_client.ConnectRequests);
         Assert.Equal(new HyperVTarget(SampleData.VmId, EnhancedSession: false), request.HyperV);
+    }
+
+    [Fact]
+    public void Connect_ToAHyperVMachineOnAnotherComputer_Fails() {
+        var vm = _connection with { Kind = ConnectionKind.HyperV, Address = "hyperv.example.test", VmId = SampleData.VmId };
+        var session = _manager.GetOrCreate(vm);
+
+        session.Connect(vm);
+
+        Assert.Empty(_client.ConnectRequests);
+        Assert.Equal(SessionState.Failed, session.State);
+        Assert.Contains("hyperv.example.test is not this computer.", session.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -79,6 +79,10 @@ and the interface contains only the connection list and the session itself.
     console does it, without network access inside the VM. Decided on 2026-11-17:
     - only the Hyper-V host on this computer is needed; RemoteMe signs in to it with the current Windows
       account (which must be allowed to use Hyper-V), so a VM connection has no user name or password;
+    - since that account would sign in to any host, only this computer is accepted: `localhost`, a
+      loopback address, the computer's name or one of its addresses. The connection form refuses
+      another host, and a VM connection whose host is another computer (in a settings file shared with
+      another machine) is not started (added on 2026-11-19, after the security review);
     - each VM connection chooses an enhanced session (on by default) or a basic one. An enhanced
       session needs Remote Desktop inside the VM, follows the window size and has redirection; the VM
       asks for its own password in a Windows dialog every time, and nothing is remembered. A basic

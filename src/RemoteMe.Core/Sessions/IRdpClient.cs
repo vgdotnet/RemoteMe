@@ -38,6 +38,9 @@ public sealed record RdpConnectRequest(string Server, string UserName, Protected
         if (connection.VmId is not { } vmId) {
             throw new InvalidOperationException("The VM ID is missing.");
         }
+        if (!HyperVHost.IsThisComputer(connection.Address)) {
+            throw new InvalidOperationException($"{connection.Address} is not this computer. {HyperVHost.Requirement}");
+        }
         return new(connection.Address, "", null, connection.Redirection) {
             HyperV = new HyperVTarget(vmId, EnhancedSession: !connection.BasicSession),
         };

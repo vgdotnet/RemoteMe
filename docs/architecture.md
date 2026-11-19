@@ -81,13 +81,13 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | Module | Project | Responsibility |
 |---|---|---|
 | Vault | Core | File format, key derivation, encryption, atomic write, master password change; `SettingsStore`: the settings the application works with, saved on every change, read again after an outside change |
-| Model | Core | Connections, groups, settings; schema version and migrations; `System.Text.Json` with source generation; edits (`SettingsEditor`) and the rows of the list with drop targets for dragging (`ConnectionListLayout`) |
+| Model | Core | Connections, groups, settings; schema version and migrations; `System.Text.Json` with source generation; edits (`SettingsEditor`) and the rows of the list with drop targets for dragging (`ConnectionListLayout`); where a click on the tab at the edge of the list takes its width (`ListWidth`) |
 | Sessions | Core | Session manager, states (disconnected, connecting, connected, reconnecting, failed), disconnect reason texts, `IRdpClient` (the component as the sessions see it), size and scale calculation (`SessionDisplay`) |
 | Clock | Core | `ClockZone`: the time zone of the clock above the list buttons - finding it by id, its main city, the UTC offset text, search by city or offset |
 | Log | Core | In-memory log of the run with a size limit, the log file written on its own thread, the hang detector and the marker of an unfinished run (`Logging/`, since `.gitignore` ignores `Log/` folders); the watchdog thread, the error handlers and the copy of the Windows crash records are in `RemoteMe/App` |
 | RdpInterop | RemoteMe | `RdpClientControl` derived from `AxHost` and implementing `IRdpClient`, hand-declared COM interfaces, event sink |
 | Display | RemoteMe | In `RdpClientControl`: delay for a series of size and DPI changes, the window's own DPI |
-| UI | RemoteMe | Unlock window, main window (list, clock with a time zone window, session view with a status overlay), separate session window, full-screen window, connection form, password prompt for a connection, log window; menus drawn by Windows (`NativeMenu`), icon buttons that center their icon by its ink (`GlyphButton`) |
+| UI | RemoteMe | Unlock window, main window (list, clock with a time zone window, session view with a status overlay), separate session window, full-screen window, connection form, password prompt for a connection, log window; menus drawn by Windows (`NativeMenu`), icon buttons that center their icon by its ink (`GlyphButton`), the tab at the edge of the list that narrows, widens and drags it (`ListHandle`) |
 | Input | RemoteMe | `HotkeyHook`: low-level keyboard hook for the hotkeys while the focus is inside the remote desktop |
 | App | RemoteMe | Entry point, manual wiring of dependencies, single instance, unhandled error handling |
 | Build | - | Single-file publish profile; GitHub Actions: build, tests and formatting on every push (`build.yml`), a release with the exe and its SHA-256 for each `vX.Y.Z` tag (`release.yml`), not signed; a signing step through SignPath runs only when configured |

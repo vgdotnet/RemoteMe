@@ -38,8 +38,11 @@ internal sealed class MainForm : Form {
     private readonly Font _glyphFont;
     private readonly ConnectionList _list;
     private readonly ClockPanel _clock;
+    private readonly ListHandle _handle;
     private readonly SessionView _mainView;
     private HotkeyHook? _hotkeys;
+    private bool _handleDragging;
+    private int _dragStartWidth;
     private Guid? _menuConnectionId;
     private LogForm? _logForm;
     private bool _mainFullScreen;
@@ -94,6 +97,12 @@ internal sealed class MainForm : Form {
         _leftPanel.Controls.Add(_bottomLine);
         _leftPanel.Controls.Add(_clock);
         _leftPanel.Controls.Add(_bottomBar);
+        // The tab lies above the rows and the circles and is always seen; the compact strip keeps its width
+        // and the tab may cover the edge of a circle (decided on 2026-11-19).
+        _handle = new ListHandle { Size = new Size(16, 48) };
+        _leftPanel.Controls.Add(_handle);
+        _handle.BringToFront();
+        ShowHandleState();
         _split.Panel1.Controls.Add(_leftPanel);
         _split.Panel2.Controls.Add(_mainView);
         _listStrip = new Button {
@@ -123,6 +132,24 @@ internal sealed class MainForm : Form {
         _fullScreenButton.Click += (_, _) => ToggleMainFullScreen();
         _moreButton.Click += (_, _) => ShowMoreMenu();
         _listStrip.Click += (_, _) => ToggleList();
+        _handle.Clicked += (_, _) => StepList();
+        _handle.DragStarted += (_, _) => {
+            _handleDragging = true;
+            _dragStartWidth = _split.SplitterDistance;
+        };
+        _handle.Dragged += (_, offset) => {
+            SetListWidth(_dragStartWidth + offset);
+            SnapList();
+        };
+        _handle.DragEnded += (_, _) => {
+            _handleDragging = false;
+            SnapList();
+        };
+        _leftPanel.SizeChanged += (_, _) => PlaceHandle();
+        _list.SizeChanged += (_, _) => PlaceHandle();
+        _list.ClientSizeChanged += (_, _) => PlaceHandle();
+        _list.Invalidated += (_, _) => _handle.Invalidate();
+        _clock.Invalidated += (_, _) => _handle.Invalidate();
         _list.ConnectionSelected += (_, e) => ShowConnection(e.Connection);
         _list.ConnectionActivated += (_, e) => OpenConnection(e.Connection);
         _list.MenuRequested += (_, e) => ShowConnectionMenu(e.Connection.Id, e.ScreenLocation);
@@ -539,12 +566,12 @@ internal sealed class MainForm : Form {
     }
 
     // A list dragged narrower than the clock goes to the compact strip or back to the clock's width,
-    // whichever is nearer.
+    // whichever is nearer; while the tab is dragged the list follows the mouse and snaps when it is let go.
     private void SnapList() {
         var full = _clock.MinimumWidth;
         var compact = _list.CompactWidth;
         var width = _split.SplitterDistance;
-        if (width < full) {
+        if (width < full && !_handleDragging) {
             var snapped = width - compact < full - width ? compact : full;
             if (snapped != width) {
                 _split.SplitterDistance = snapped;
@@ -561,6 +588,7 @@ internal sealed class MainForm : Form {
         }
         _list.Compact = compact;
         _clock.Compact = compact;
+        ShowHandleState();
         _bottomBar.SuspendLayout();
         if (compact) {
             _bottomBar.SetCellPosition(_addButton, new TableLayoutPanelCellPosition(0, 0));
@@ -581,6 +609,33 @@ internal sealed class MainForm : Form {
             button.Anchor = compact ? AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right : AnchorStyles.Top | AnchorStyles.Left;
         }
         _bottomBar.ResumeLayout(true);
+        PlaceHandle();
+    }
+
+    // A click on the tab: see ListWidth for where it takes the list.
+    private void StepList() {
+        SetListWidth(ListWidth.AfterHandleClick(_split.SplitterDistance, _clock.MinimumWidth, _list.CompactWidth));
+        SnapList();
+    }
+
+    // Kept within what the split allows, which throws for a distance out of its bounds.
+    private void SetListWidth(int width) {
+        var max = Math.Max(_split.Panel1MinSize, _split.Width - _split.SplitterWidth - _split.Panel2MinSize);
+        _split.SplitterDistance = Math.Clamp(width, _split.Panel1MinSize, max);
+    }
+
+    // Half way down the left panel, at the right edge of the rows or the circles, left of their scroll bar
+    // when they have one.
+    private void PlaceHandle() {
+        var right = _list.Left + _list.ClientSize.Width;
+        _handle.Location = new Point(right - _handle.Width, (_leftPanel.ClientSize.Height - _handle.Height) / 2);
+    }
+
+    private void ShowHandleState() {
+        var name = _list.Compact ? "Widen the list" : "Narrow the list";
+        _handle.PointsRight = _list.Compact;
+        _handle.AccessibleName = name;
+        _toolTip.SetToolTip(_handle, name);
     }
 
     // The main window covers its monitor, taskbar included, with no title bar; the list stays. Only the

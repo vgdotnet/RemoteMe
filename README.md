@@ -150,6 +150,14 @@ Decisions made on 2026-11-12 and 2026-11-13.
   PA). A ring marks the session on screen, and the tooltip gives the full name. Clicks, keys and the
   right-click menu work as in the list; there is no dragging. The clock shows only its time (decided on 2026-11-19) and the buttons stand
   one under another. When the circles do not fit in the height, the strip gets wider by the scroll bar.
+- **Tab at the edge of the list** (decided on 2026-11-19, option A of four mockups). A tab with two
+  arrows lies at the right edge of the list, half way down the left panel, left of the scroll bar when
+  there is one. A click on it takes a list wider than the clock to the clock's width, the clock's width
+  to the compact strip, and the compact strip back to the clock's width, not to the width the list had
+  before; the list gets wider than the clock only by dragging. The arrows point left on the full list
+  and right on the strip. Dragging the tab moves the border of the list, as the splitter does, and the
+  list snaps when let go, as above. The tab lies above the rows and the circles and is always seen: it
+  may cover the end of a row or the edge of a circle, and the strip keeps its width of 44 pixels.
 - **Order by dragging** (decided on 2026-11-13). Connections and groups are put in order by dragging
   them in the list, and the order is kept in the settings file. Connections without a group come
   first. A connection dropped on a group caption goes first in that group; dragged above the first

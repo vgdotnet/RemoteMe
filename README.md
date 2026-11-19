@@ -9,7 +9,9 @@ and the interface contains only the connection list and the session itself.
   the exe in any folder, and the settings file is created next to it. To check the download, see
   "Build".
 - Code: `C:\projects\RemoteMe`, https://github.com/vgdotnet/RemoteMe (branch main)
-- Status as of 2026-11-19: stages 0-7 done, v0.8.0 released (the log file in the `Logs` folder next to
+- Status as of 2026-11-19: stages 0-7 done, v0.8.1 released (the tab at the edge of the list: a click
+  steps the list between its full width, the clock's width and the compact strip, and dragging the tab
+  moves the border; v0.8.0 added the log file in the `Logs` folder next to
   the exe, with unhandled exceptions, the hangs of the window and the crash records of Windows after a
   run that did not close; the menus drawn by Windows; the icons of the list buttons centered by their
   ink; v0.7.1 showed the address of the

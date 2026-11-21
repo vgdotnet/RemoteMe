@@ -4,20 +4,24 @@ using RemoteMe.Core.Vault;
 namespace RemoteMe.UI;
 
 // Asks for the master password: a new one on the first run, the current one at start, or the one a
-// file changed outside the application was saved with.
+// file changed outside the application was saved with. At start it also asks whether to remember the
+// password on this computer; the caller saves or removes it.
 [DesignerCategory("Code")]
 internal sealed class UnlockForm : Form {
     private readonly Mode _mode;
     private readonly string _path;
+    private readonly RememberedPassword? _remembered;
     private readonly SettingsStore? _reloadStore;
     private readonly TextBox _password;
     private readonly TextBox? _repeat;
+    private readonly CheckBox? _remember;
     private readonly Label _message;
     private readonly Button _accept;
 
-    private UnlockForm(Mode mode, string path, SettingsStore? reloadStore) {
+    private UnlockForm(Mode mode, string path, RememberedPassword? remembered, SettingsStore? reloadStore, string? notice) {
         _mode = mode;
         _path = path;
+        _remembered = remembered;
         _reloadStore = reloadStore;
 
         SuspendLayout();
@@ -28,7 +32,7 @@ internal sealed class UnlockForm : Form {
         }
 
         var grid = DialogLayout.CreateGrid(1);
-        grid.Controls.Add(DialogLayout.CreateText(mode switch {
+        grid.Controls.Add(DialogLayout.CreateText(notice ?? mode switch {
             Mode.Create => "Create a master password. It encrypts the settings file next to RemoteMe "
                 + "and cannot be recovered if you forget it.",
             Mode.Reload => "The settings file was saved with a different master password. "
@@ -46,6 +50,12 @@ internal sealed class UnlockForm : Form {
             grid.Controls.Add(_repeat);
         }
         grid.Controls.Add(_repeat is null ? DialogLayout.CreateShowPassword(_password) : DialogLayout.CreateShowPassword(_password, _repeat));
+        if (remembered is not null) {
+            // Ticked when a saved password did not fit, so entering the current one saves it again.
+            _remember = DialogLayout.CreateCheckBox("Remember on this computer");
+            _remember.Checked = mode == Mode.Unlock && remembered.Exists;
+            grid.Controls.Add(_remember);
+        }
         _message = DialogLayout.CreateMessage();
         grid.Controls.Add(_message);
         grid.Controls.Add(DialogLayout.CreateButtons(
@@ -75,9 +85,21 @@ internal sealed class UnlockForm : Form {
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public SettingsStore? Store { get; private set; }
 
-    public static UnlockForm ForStartup(string path) => new(File.Exists(path) ? Mode.Unlock : Mode.Create, path, null);
+    // Whether to save the master password on this computer; false when the box is not shown.
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Remember => _remember?.Checked == true;
 
-    public static UnlockForm ForReload(SettingsStore store) => new(Mode.Reload, store.Path, store);
+    // Why the master password saved on this computer could not be updated after the file was read again.
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string? Warning { get; private set; }
+
+    // The notice replaces the usual text, for example to say why the saved password did not fit.
+    public static UnlockForm ForStartup(string path, RememberedPassword remembered, string? notice = null) =>
+        new(File.Exists(path) ? Mode.Unlock : Mode.Create, path, remembered, null, notice);
+
+    public static UnlockForm ForReload(SettingsStore store) => new(Mode.Reload, store.Path, null, store, null);
 
     private void UpdateState() {
         _accept.Enabled = _password.TextLength > 0 && (_repeat is null || _repeat.TextLength > 0);
@@ -105,13 +127,17 @@ internal sealed class UnlockForm : Form {
         try {
             switch (_mode) {
                 case Mode.Create:
-                    Store = await Task.Run(() => SettingsStore.Create(_path, password));
+                    Store = await Task.Run(() => SettingsStore.Create(_path, password, _remembered));
                     break;
                 case Mode.Unlock:
-                    Store = await Task.Run(() => SettingsStore.Open(_path, password));
+                    Store = await Task.Run(() => SettingsStore.Open(_path, password, _remembered));
                     break;
                 case Mode.Reload:
-                    _reloadStore!.Reload(password);
+                    try {
+                        _reloadStore!.Reload(password);
+                    } catch (RememberedPasswordException ex) {
+                        Warning = ex.Message;
+                    }
                     break;
             }
             DialogResult = DialogResult.OK;
@@ -132,6 +158,9 @@ internal sealed class UnlockForm : Form {
         _password.Enabled = !busy;
         if (_repeat is not null) {
             _repeat.Enabled = !busy;
+        }
+        if (_remember is not null) {
+            _remember.Enabled = !busy;
         }
         _accept.Enabled = !busy && _password.TextLength > 0;
     }

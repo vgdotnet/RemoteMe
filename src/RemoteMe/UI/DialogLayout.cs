@@ -61,9 +61,15 @@ internal static class DialogLayout {
         UseSystemPasswordChar = password,
     };
 
+    public static CheckBox CreateCheckBox(string text) => new() {
+        Text = text,
+        AutoSize = true,
+        Margin = new Padding(3, 6, 3, 0),
+    };
+
     // Shows or hides the typed text of the given password boxes; off by default.
     public static CheckBox CreateShowPassword(params TextBox[] passwordBoxes) {
-        var box = new CheckBox { Text = "Show password", AutoSize = true, Margin = new Padding(3, 6, 3, 0) };
+        var box = CreateCheckBox("Show password");
         box.CheckedChanged += (_, _) => {
             foreach (var passwordBox in passwordBoxes) {
                 passwordBox.UseSystemPasswordChar = !box.Checked;

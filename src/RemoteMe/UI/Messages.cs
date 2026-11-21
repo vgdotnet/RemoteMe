@@ -13,6 +13,10 @@ internal static class Messages {
         MessageBox.Show(owner, text, Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
+    public static void Warning(IWin32Window owner, string text) {
+        MessageBox.Show(owner, text, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
     public static void Information(IWin32Window owner, string text) {
         MessageBox.Show(owner, text, Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }

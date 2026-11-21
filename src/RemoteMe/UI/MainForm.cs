@@ -776,6 +776,11 @@ internal sealed class MainForm : Form {
             .Add("Clock time zone...", ChooseClockTimeZone)
             .AddSubmenu("Background", background)
             .Add("Change master password...", ChangeMasterPassword)
+            .Add(
+                "Remember master password on this computer",
+                ToggleRememberedPassword,
+                enabled: _store.Remembered is not null,
+                isChecked: _store.IsRemembered)
             .Add("Log", ShowLog)
             .Add("About RemoteMe", () => {
                 using var about = new AboutForm(_store.Path, _logPath);
@@ -850,9 +855,31 @@ internal sealed class MainForm : Form {
         }
         var newPassword = form.NewPassword;
         Cursor.Current = Cursors.WaitCursor;
-        if (Save(overwrite => _store.ChangeMasterPassword(newPassword, overwrite))) {
+        try {
+            if (Save(overwrite => _store.ChangeMasterPassword(newPassword, overwrite))) {
+                _log.Information(LogSource, "The master password was changed.");
+                Messages.Information(this, "The master password was changed.");
+            }
+        } catch (RememberedPasswordException ex) {
             _log.Information(LogSource, "The master password was changed.");
-            Messages.Information(this, "The master password was changed.");
+            _log.Warning(LogSource, ex.Message);
+            Messages.Warning(this, $"The master password was changed.\n\n{ex.Message}");
+        }
+    }
+
+    // The password is already in memory, so saving it needs no prompt.
+    private void ToggleRememberedPassword() {
+        try {
+            if (_store.IsRemembered) {
+                _store.Forget();
+                _log.Information(LogSource, "The master password saved on this computer was removed.");
+            } else {
+                _store.Remember();
+                _log.Information(LogSource, "The master password was saved on this computer.");
+            }
+        } catch (RememberedPasswordException ex) {
+            _log.Error(LogSource, ex.Message);
+            Messages.Error(this, ex.Message);
         }
     }
 
@@ -880,6 +907,10 @@ internal sealed class MainForm : Form {
                         save(true);
                         _log.Information(LogSource, "The settings file was overwritten.");
                         return true;
+                    } catch (RememberedPasswordException) {
+                        // The file was written; only the master password saved on this computer was not.
+                        _log.Information(LogSource, "The settings file was overwritten.");
+                        throw;
                     } catch (Exception inner) when (IsFileError(inner)) {
                         ReportSaveError(inner);
                         return false;
@@ -900,9 +931,17 @@ internal sealed class MainForm : Form {
         try {
             _store.Reload();
             _log.Information(LogSource, "The settings file was read again.");
+        } catch (RememberedPasswordException ex) {
+            // The same master password set again elsewhere gives the file a new salt.
+            _log.Information(LogSource, "The settings file was read again.");
+            _log.Warning(LogSource, ex.Message);
+            Messages.Warning(this, ex.Message);
         } catch (VaultException ex) when (ex.Error == VaultError.WrongPassword) {
             using var form = UnlockForm.ForReload(_store);
-            form.ShowDialog(this);
+            if (form.ShowDialog(this) == DialogResult.OK && form.Warning is { } warning) {
+                _log.Warning(LogSource, warning);
+                Messages.Warning(this, warning);
+            }
         } catch (Exception ex) when (IsFileError(ex)) {
             _log.Error(LogSource, $"The settings file could not be read: {ex.Message}");
             Messages.Error(this, $"The settings file could not be read.\n\n{ex.Message}");

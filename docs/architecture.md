@@ -47,6 +47,14 @@ windows. COM lives only in the RDP wrapper. Cryptography and file access live on
    costs. A file in format 1 (up to v0.8.1: 64 bytes from PBKDF2, two blocks of full cost, the first the
    encryption key and the second the key-check key) is still read, and the next save writes it in
    format 2. The layout is described in `src/RemoteMe.Core/Vault/VaultHeader.cs`.
+   When the master password is remembered on this computer (a box in the unlock window, off by default,
+   or the "..." menu), RemoteMe opens without the window: `RememberedPassword` keeps the password in
+   `RemoteMe.<computer>-<id>.unlock` next to the settings file (the id is a hash of the machine id and
+   the Windows user's SID), encrypted with DPAPI for the current Windows user, with the salt of the
+   settings file in the entropy; a blob made for the whole computer is refused. The salt changes with each new master
+   password, so a password changed here or on another computer, or a copy DPAPI cannot decrypt, brings
+   the unlock window back with the reason. A master password changed in RemoteMe, or a file read again
+   with another one, replaces the saved copy.
 2. **Save.** Every change in the UI goes through `SettingsStore.Apply` and is saved at once. Check that
    the file on disk is still the one the vault read or wrote last; otherwise a conflict is reported,
    nothing is written, and the UI asks whether to read the file again or overwrite it. Then model to
@@ -82,7 +90,7 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 
 | Module | Project | Responsibility |
 |---|---|---|
-| Vault | Core | File format, key derivation, encryption, atomic write, master password change; `SettingsStore`: the settings the application works with, saved on every change, read again after an outside change |
+| Vault | Core | File format, key derivation, encryption, atomic write, master password change; `SettingsStore`: the settings the application works with, saved on every change, read again after an outside change; `RememberedPassword`: the master password saved on one computer with DPAPI (`Security/Dpapi.cs`) |
 | Model | Core | Connections, groups, settings; schema version and migrations; `System.Text.Json` with source generation; edits (`SettingsEditor`) and the rows of the list with drop targets for dragging (`ConnectionListLayout`); where a click on the tab at the edge of the list takes its width (`ListWidth`) |
 | Sessions | Core | Session manager, states (disconnected, connecting, connected, reconnecting, failed), disconnect reason texts, `IRdpClient` (the component as the sessions see it), size and scale calculation (`SessionDisplay`) |
 | Clock | Core | `ClockZone`: the time zone of the clock above the list buttons - finding it by id, its main city, the UTC offset text, search by city or offset |
@@ -124,6 +132,7 @@ Layout: `RemoteMe.slnx` in the root; `src/RemoteMe.Core` (`net10.0`), `src/Remot
 | A replaced or rolled back file (for example, a lowered iteration count) | The header is part of the data authenticated by AES-GCM; limits on accepted parameters |
 | Passwords in process memory (.NET strings cannot be zeroed, dumps, page file) | Keep connection passwords encrypted and decrypt them only at connect time; zero the buffers; never write secrets to the log or to error messages |
 | An unlocked application left unattended | Accepted: there is no auto-lock |
+| The master password remembered on a computer | Off by default. Anyone signed in to Windows as this user on that computer, and any program running as this user, opens the connections without the password; accepted by the owner when the box is ticked. The copy is encrypted with DPAPI for this user (a blob made for the whole computer, which any of its users can make, is refused) and fits only the settings file and master password it was saved for; it travels with the shared folder but cannot be decrypted on another computer or for another user |
 | Untrusted server certificate, man-in-the-middle attack | NLA (CredSSP) is offered and used whenever the server supports it, but not required: a server without it can choose TLS, and the password then goes inside TLS, as with mstsc's defaults. The component warns when it cannot verify the server, and Windows remembers the consent on each machine |
 | The current Windows account signing in to another computer's Hyper-V host | Only this computer is accepted as the host: `localhost`, a loopback address, its name or one of its addresses. The connection form refuses another host, and a VM connection whose host is another computer (in a settings file shared with another machine) is not started |
 | RDP bitmap cache on disk and traces in the registry | Turn off the persistent cache; the server certificate thumbprints the component keeps in the registry, shared with mstsc, stay |

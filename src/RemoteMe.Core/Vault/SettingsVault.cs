@@ -29,6 +29,9 @@ public sealed class SettingsVault : IDisposable {
 
     public ulong Revision { get; private set; }
 
+    // The salt changes only with a new master password.
+    internal ReadOnlySpan<byte> Salt => _salt;
+
     public static SettingsVault Create(string path, string password, Settings settings) =>
         Create(path, password, settings, VaultPolicy.Default);
 
@@ -78,6 +81,8 @@ public sealed class SettingsVault : IDisposable {
             throw;
         }
     }
+
+    internal static byte[] ReadSalt(string path) => VaultHeader.Read(ReadFile(path)).Salt;
 
     // With overwrite set, a file changed outside the vault is replaced instead of reporting a conflict.
     public void Save(Settings settings, bool overwrite = false) {
